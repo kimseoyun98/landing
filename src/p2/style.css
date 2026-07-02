@@ -1,0 +1,471 @@
+/* ============================================================
+   P2 — 이롬넷 Proposal 2 전용 스타일
+   Figma 기반: 배경 #230800, Pill 헤더, 영상 히어로, 스탯, 피처, 파트너, 뉴스
+   ============================================================ */
+
+/* ── 리셋 & 기본 ────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --p2-dark:    #230800;
+  --p2-orange:  #ffa44e;
+  --p2-orange2: #ffae62;
+  --p2-red:     #ff6114;
+  --p2-cream:   #fff8f3;
+  --p2-white:   #ffffff;
+  --p2-text:    #1c1917;
+  --font-pre:   'Pretendard', 'Inter', sans-serif;
+  --font-mono:  'Geist Mono', 'Courier New', monospace;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-pre);
+  background: var(--p2-dark);
+  color: var(--p2-white);
+  overflow-x: hidden;
+}
+
+/* ── Pill 헤더 ──────────────────────────────────────────────── */
+.p2-header {
+  position: fixed;
+  /* left/right:0 + margin:auto 방식 — Framer Motion y 애니메이션과 transform 충돌 없음 */
+  top: 8px;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  /* 반응형: 화면 가로 기준으로 pill 너비 유동 조정
+     1920px → 900px (47%)  /  1440px → 800px  /  1280px → 720px
+     min 600px (모바일 하한) — clamp로 부드럽게 보간 */
+  width: clamp(600px, 62vw, 1080px);
+  height: 56px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  padding: 0 8px 0 24px;
+  background: rgba(35, 8, 0, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10000px;
+  box-sizing: border-box;
+  transition: background 0.4s ease, border-color 0.4s ease, width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─── 반응형 pill 너비 브레이크포인트 ─── */
+@media (max-width: 1600px) {
+  .p2-header { width: clamp(560px, 70vw, 1000px); }
+}
+@media (max-width: 1280px) {
+  .p2-header { width: clamp(520px, 78vw, 900px); }
+}
+@media (max-width: 900px) {
+  .p2-header { width: calc(100vw - 32px); }
+}
+@media (max-width: 600px) {
+  .p2-header {
+    width: calc(100vw - 24px);
+    padding: 0 6px 0 16px;
+  }
+}
+
+
+/* 헤더 pill 호버: border 조음 한 밝아짐 */
+.p2-header:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+
+/* 라이트 모드 (cream/white 섹션 진입 시) */
+.p2-header--light {
+  background: rgba(255, 255, 255, 0.6);    /* Figma: #ffffff 60% */
+  border-color: rgba(35, 8, 0, 0.08);      /* Figma: #230800 8% stroke */
+}
+
+.p2-header--light:hover {
+  border-color: rgba(35, 8, 0, 0.15);
+}
+
+/* 라이트 모드 nav */
+.p2-header--light .p2-nav-link {
+  color: #230800;                           /* Figma: #230800 */
+}
+
+/* 라이트 모드 nav hover overlay: #230800 15% */
+.p2-header--light .p2-nav-item:hover::before {
+  background: rgba(35, 8, 0, 0.15);        /* Figma: #230800 15% */
+}
+
+/* 라이트 모드 로고: src를 logo-dark.svg로 교체 (PillHeader에서 처리) */
+
+/* CTA 버튼: dark/light 동일 — #ffae62 유지 (Figma 실측) */
+/* .p2-header--light .p2-btn-cta 는 별도 override 없음 */
+
+.p2-header__inner {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+}
+
+.p2-header__left {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.p2-header__logo {
+  /* Figma: 로고 영역 w=187px, h=30px */
+  width: 187px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.p2-header__logo img {
+  height: 26px;
+  width: auto;
+  transition:
+    height  0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    filter  0.4s ease;
+}
+
+/* Figma: Navigation 컨테이너 — pill 높이(56px) 전체를 차지 */
+.p2-header__nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;   /* 중앙 열에서 가운데 정렬 */
+  height: 56px;
+  gap: 8px;
+}
+
+/* nav-item */
+.p2-nav-item {
+  display: flex;
+  align-items: center;
+  height: 56px;
+}
+
+.p2-nav-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  height: 36px;
+  font-family: var(--font-pre);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--p2-white);
+  text-decoration: none;
+  white-space: nowrap;
+  opacity: 0.8;
+  transition: opacity 0.2s ease, color 0.4s ease;
+}
+.p2-nav-link:hover {
+  opacity: 1;
+}
+.p2-header--light .p2-nav-link {
+  color: #230800;
+}
+
+.p2-header__right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* 소셜 뱃지 */
+.p2-social-badge {
+  display: flex;
+  align-items: center;
+  /* Figma: FB(x=1113)→IG(x=1163): 1163-1113-38=12px gap */
+  gap: 12px;
+}
+
+.p2-social-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+  text-decoration: none;
+  color: var(--p2-white);
+}
+
+.p2-social-btn:hover { background: rgba(255, 255, 255, 0.18); }
+
+.p2-social-btn svg { width: 18px; height: 18px; }
+
+/* CTA 버튼 — Figma Button-M: w=138 h=38 r=100 fs=12 fw=400 */
+.p2-btn-cta {
+  height: 38px;
+  width: 138px;
+  padding: 0 14px;
+  background: #ffae62;
+  color: #230800;
+  border: none;
+  border-radius: 100px;
+  font-family: var(--font-pre);
+  font-size: 12px;
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  /* overflow:hidden — roll 클리핑 */
+  overflow: hidden;
+  transition: background 0.2s ease, color 0.4s ease;
+}
+
+/* ── Roll-up 인터렉션 (제안1 .p1-btn-cta--roll 동일) ─── */
+.p2-btn-cta--roll {
+  padding: 0;  /* inner가 패딩 담당 */
+}
+
+.p2-btn-roll-inner {
+  display: grid;
+  overflow: hidden;
+  padding: 0 14px;
+  width: 100%;
+  height: 100%;
+}
+
+.p2-btn-roll-front,
+.p2-btn-roll-back {
+  grid-area: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition:
+    transform 0.55s cubic-bezier(0.19, 1, 0.22, 1),
+    opacity   0.55s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+.p2-btn-roll-back {
+  transform: translateY(110%);
+  opacity: 0;
+}
+
+.p2-btn-cta--roll:hover .p2-btn-roll-front {
+  transform: translateY(-110%);
+  opacity: 0;
+}
+
+.p2-btn-cta--roll:hover .p2-btn-roll-back {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.p2-btn-cta:active {
+  filter: brightness(0.88);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   히어로 섹션 — 380vh 스크롤 주차장 + 100vh sticky 패널
+   Section 1: "기술로 연결하는 세상 모든 거래" (RandomRevealText, blur 퇴장)
+   Section 2: "Connect every transactions" (ScatterRevealText, scroll-driven)
+   ════════════════════════════════════════════════════════════════ */
+
+/* 스크롤 주차장 (380vh) — 스크롤이 여기 머무는 동안 inner 패널 고정 */
+.p2-hero-outer {
+  height: 380vh;
+  position: relative;
+}
+
+/* Sticky 패널 — 100vh, 뷰포트 상단에 고정 */
+.p2-hero-sticky {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  height: 100vh;
+  min-height: 700px;
+  background: var(--p2-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 헤더 64px 보정: 시각적 중앙 = (100vh - 64px)/2 + 64px */
+  padding-top: 64px;
+  overflow: hidden;
+}
+
+.p2-hero__video {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -6%;        /* 패럴랙스 이동 여유 — 위 기준점 */
+  width: 100%;
+  height: 120%;    /* 120% = 기본 100% + 위아래 패럴랙스 여유 20% */
+  object-fit: cover;
+  opacity: 0.45;
+  will-change: transform;
+}
+
+.p2-hero__overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(35, 8, 0, 0.15) 0%,
+    rgba(35, 8, 0, 0.05) 50%,
+    rgba(35, 8, 0, 0.40) 100%
+  );
+  pointer-events: none;
+}
+
+/* content div — sticky 패널 안에서 flex 정중앙 */
+.p2-hero__content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ── Section 1 wrapper: blur filter가 이 트리 안에만 적용 */
+.p2-hero__s1-wrap {
+  position: relative;
+}
+
+/* ── Section 2 wrapper: isolation:isolate으로 Section 1 filter와 완전 격리
+   Section 1과 같은 위치에 absolute 겹침 */
+.p2-hero__s2-wrap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* 헤더 64px 보정 */
+  padding-top: 64px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 새로운 stacking context 생성 → Section 1의 filter 컴포지팅과 완전 분리 */
+  isolation: isolate;
+  text-align: center;
+}
+
+/* 공통 텍스트 스타일
+   Figma Proposal2 기준:
+   - font-size:      60px  (1920px 캔버스 기준 → 3.125vw)
+   - letter-spacing: -1.25px
+   - line-height:    80px  (= 60 × 1.333...)
+*/
+.p2-hero__swap-text {
+  font-family: var(--font-pre);
+  font-size: clamp(36px, 3.125vw, 60px); /* Figma: 60px @ 1920px */
+  letter-spacing: -1.25px;
+  line-height: 1.333;
+  margin: 0;
+  padding: 0;
+  will-change: opacity, filter, transform;
+}
+
+/* Section 1 — 흰색 */
+.p2-hero__swap-text--one {
+  color: var(--p2-white);
+  font-weight: 500;
+  display: block;
+}
+
+/* Section 2 — 주황색 */
+.p2-hero__swap-text--two {
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  color: #ffae62;
+  letter-spacing: -1.25px;
+  font-weight: 400;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   TextHighlightSection — 스크롤 하이라이팅 텍스트
+   Figma 276:46613: Pretendard Medium 500 / 62px / -0.62px / 74.4lh
+   배경: #230800 (Figma 실측)
+   ════════════════════════════════════════════════════════════════ */
+
+.p2-highlight-outer {
+  height: 450vh;
+  position: relative;
+}
+
+.p2-highlight-sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  padding-top: 64px;
+  background: #fff8f3;
+  display: flex;
+  align-items: center;
+  justify-content: center;  /* 수평 중앙 정렬 */
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* 중앙 정렬 — 피그마 좌측 오프셋 제거, flex 중앙 정렬 */
+.p2-highlight__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+  max-width: 1100px;
+  padding: 0 clamp(24px, 5vw, 80px);
+  margin: 0 auto;
+}
+
+/* 2줄 묶음 — margin으로 그룹 간격 */
+.p2-highlight__group {
+  margin-bottom: clamp(8px, 1.2vw, 24px);
+  will-change: opacity;
+  transition: opacity 0.4s ease;
+}
+
+.p2-highlight__group:last-child {
+  margin-bottom: 0;
+}
+
+/* Figma 수치 기준 / 최대 50px 제한 */
+.p2-highlight__phrase {
+  font-family: var(--font-pre);
+  font-size:      clamp(24px, 2.6vw, 50px);   /* 50px @ 1920px */
+  font-weight:    500;
+  letter-spacing: -0.62px;
+  line-height:    1.2;
+  color: #230800;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+}
+
+/* word-pair flow 레이아웃 (인라인 흐름) */
+.p2-highlight__phrase--flow {
+  display: block;
+  line-height: 1.35;
+}
+
+/* 개별 2단어 청크 — Framer Motion이 opacity 제어 */
+.p2-highlight__word-chunk {
+  display: inline;
+  will-change: opacity;
+}
+
+/* ── 섹션 공통 진입 애니메이션 ─────────────────────────────── */
+.p2-fade-in {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.p2-fade-in.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}

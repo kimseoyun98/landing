@@ -1,0 +1,520 @@
+/* P3 전용 스타일 시작 */
+:root {
+  --p3-bg: #090a0f;
+  --p3-text: #ffffff;
+  --font-pre: 'Pretendard', sans-serif;
+}
+
+html {
+  background-color: #ffffff;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #ffffff;
+  color: var(--p3-text);
+  font-family: var(--font-pre);
+  min-height: 100vh;
+}
+
+.p3-container {
+  text-align: center;
+  padding: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* ─────────────────────────────────────────────────────────
+   P3 Header — Figma proposal=3, mode=dark
+   1920 × 80px, transparent bg, 좌우 padding 240px
+   
+   로고: 127 × 30px (white)
+   Separator: 1px × 16px, rgba(#fff, 10%)
+   로고↔separator gap: 24px
+   separator↔nav gap: 24px
+   
+   Nav items (Pretendard Regular 400, 16px, #ffffff, CENTER):
+     회사소개  100px
+     기술과신뢰 120px
+     서비스    100px
+     소식      100px
+   
+   버튼: 182 × 48px, bg #ff6114, radius 6px
+         "Global (English)", Pretendard Regular 16px, #ffffff
+         text left padding 24px
+───────────────────────────────────────────────────────── */
+
+/* body.theme-p3 .p3-header → specificity 0,2,0
+   body.theme-p3 header    → specificity 0,1,1
+   .p3-header가 이기도록 body 컨텍스트 추가 */
+body.theme-p3 .p3-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  display: flex;
+  /* Figma: Container:css-transform starts 8px from header top → align to top + padding-top */
+  align-items: flex-start;
+  padding-top: 8px;       /* Figma 8px top offset (Container:css-transform y offset) */
+  justify-content: center;
+  z-index: 1001;
+  background: transparent;
+  border-bottom: none;
+  box-shadow: none;
+  box-sizing: border-box;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Light mode: 흰 배경 섹션 진입 시 */
+body.theme-p3 .p3-header--light {
+  background: #ffffff;
+  border-bottom: 1px solid rgba(28, 26, 23, 0.08);
+  box-shadow: 0 1px 10px rgba(0, 0, 0, 0.04);
+}
+
+/* ─── Inner wrapper: 양쪽 240px 패딩 ─── */
+/* Figma: Container:css-transform height=72px (80-8), content centered in 72px */
+.p3-header__inner {
+  width: 100%;
+  max-width: 1920px;
+  padding: 0 240px;
+  display: flex;
+  align-items: center;   /* 72px 영역 내에서 center → (72-48)/2 = 12px top/bottom */
+  justify-content: space-between;
+  box-sizing: border-box;
+  height: 72px;          /* Figma: Container:css-transform height = 80-8 = 72px */
+}
+
+@media (max-width: 1600px) {
+  .p3-header__inner { padding: 0 80px; }
+}
+@media (max-width: 1200px) {
+  .p3-header__inner { padding: 0 40px; }
+}
+@media (max-width: 768px) {
+  .p3-header__inner { padding: 0 20px; }
+}
+
+/* ─── LEFT: 로고 + separator + nav ─── */
+.p3-header__left {
+  display: flex;
+  align-items: center;
+  gap: 24px; /* 로고↔sep: 24px, sep↔nav: 24px */
+}
+
+.p3-header__logo {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  flex-shrink: 0;
+  line-height: 0; /* 이미지 baseline gap 제거 */
+}
+
+.p3-header__logo img {
+  width: 127px;  /* Figma: 127px */
+  height: 30px;  /* Figma: 30px */
+  display: block;
+}
+
+/* Separator: 1px × 16px */
+.p3-header__sep {
+  width: 1px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+  transition: background-color 0.3s ease;
+}
+
+body.theme-p3 .p3-header--light .p3-header__sep {
+  background: rgba(28, 26, 23, 0.1);
+}
+
+/* ─── Nav ─── */
+.p3-header__nav {
+  display: flex;
+  align-items: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Nav li: width는 inline style로 (Figma 실측), flex로 a 채우기 */
+.p3-header__nav li {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* Nav item (a): Figma Item height=36px, CENTER align
+   Figma: Item y=77045, h=36 → centered in Container(h=48): (48-36)/2=6px top/bottom */
+.p3-header__nav-item,
+body.theme-p3 .p3-header nav a.p3-header__nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;          /* li 전체 너비 채우기 */
+  height: 36px;         /* Figma: Nav Item height = 36px */
+  font-family: 'Pretendard', sans-serif;  /* 한글 메뉴 → Pretendard 전용 */
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #ffffff;
+  text-decoration: none;
+  white-space: nowrap;
+  margin: 0;
+  transition: opacity 0.18s ease;
+  text-shadow: none;
+}
+
+body.theme-p3 .p3-header--light .p3-header__nav-item,
+body.theme-p3 .p3-header--light nav a.p3-header__nav-item {
+  color: #1c1a17;
+}
+
+.p3-header__nav-item:hover,
+body.theme-p3 .p3-header nav a.p3-header__nav-item:hover {
+  opacity: 0.55;
+  color: inherit;
+  text-shadow: none;
+}
+
+/* ─── RIGHT: CTA 버튼 ─── */
+.p3-header__right {
+  display: flex;
+  align-items: center;
+}
+
+/* Button-XL: 182 × 48px, #ff6114, radius 6px */
+.p3-header__btn {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  background: #ff6114;
+  color: #ffffff;
+  border: none;
+  padding: 0 24px; /* Figma: text left padding 24px */
+  height: 48px;
+  width: 182px;
+  border-radius: 6px;
+  font-family: 'Pretendard', sans-serif;  /* 한글 CTA → Pretendard 전용 */
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 16px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+/* Roll-up hover interaction */
+.p3-header__btn-inner {
+  display: grid;
+  overflow: hidden;
+  width: 100%;
+}
+
+.p3-header__btn-front,
+.p3-header__btn-back {
+  grid-area: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  transition:
+    transform 0.55s cubic-bezier(0.19, 1, 0.22, 1),
+    opacity   0.55s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+.p3-header__btn-back {
+  transform: translateY(110%);
+  opacity: 0;
+}
+
+.p3-header__btn--roll:hover .p3-header__btn-front {
+  transform: translateY(-110%);
+  opacity: 0;
+}
+
+body.theme-p3 .p3-header__btn--roll:hover .p3-header__btn-back {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* ================================================================
+   P3 HeroSection Styling (No Background Image)
+   ================================================================ */
+/* ── Hero Scene (sticky 컨텍스트 제공) ───────────────────────── */
+.p3-hero-scene {
+  position: relative; /* sticky 기준점 */
+}
+
+/* ── Hero card (100vh 일반 섹션) ─────────────────────────────── */
+.p3-hero {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  box-sizing: border-box;
+  padding-top: 72px;
+  padding-bottom: 74px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  background-color: #1c1a17;
+  will-change: clip-path;
+  z-index: 2;
+}
+
+/* 배경 영상 — 히어로 카드를 꽉 채움, 비율 유지하며 잘림 허용 */
+.p3-hero__video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;   /* 비율 유지, 영역 밖은 clip */
+  object-position: center;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.p3-hero__overlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(28, 26, 23, 0.55);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* #FF6114 옅은 틴트 — 색감만 줌 */
+.p3-hero__tint {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(255, 97, 20, 0.02);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.p3-hero__gradient {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at 50% 50%,
+    rgba(28, 26, 23, 0.85) 0%,   /* 70% → 85% */
+    rgba(28, 26, 23, 0.00) 100%
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+
+.p3-hero__content {
+  position: relative;
+  z-index: 3;
+  flex: 1;                  /* 헤더~로고바 사이 공간 채움 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;  /* 그 공간 안에서 수직 중앙 */
+}
+
+.p3-hero__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 524px;
+  text-align: center;
+}
+
+.p3-hero__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 6px;
+  /* Glassmorphism: 배경 블러 */
+  background-color: rgba(255, 97, 20, 0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #ff6114;
+  font-family: 'Helvetica Neue', sans-serif;
+  font-weight: 500;
+  font-size: 12px;
+  line-height: 14px;
+  margin-bottom: 24px;
+}
+
+.p3-hero__text-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.p3-hero__title {
+  color: #ffffff;
+  font-family: 'Pretendard', sans-serif;  /* 한글 타이틀 → Pretendard 전용 */
+  font-size: 40px;
+  font-weight: 500;
+  line-height: 48px;
+  margin: 0;
+}
+
+.p3-hero__desc {
+  color: #ffffff;
+  opacity: 0.8;
+  font-family: 'Pretendard', sans-serif;  /* 한글 본문 → Pretendard 전용 */
+  font-size: 14px;
+  font-weight: 300;
+  line-height: 160%;
+  max-width: 396px;
+  margin: 0 auto;
+}
+
+.p3-hero__cta-wrapper {
+  display: flex;
+  justify-content: center;
+}
+
+.p3-hero__btn-xl {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 252px;
+  height: 48px;
+  padding: 0 24px;
+  border-radius: 6px;
+  background-color: #ff6114;
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  font-family: 'Pretendard', sans-serif;  /* 한글 버튼 → Pretendard 전용 */
+  font-weight: 500;
+  font-size: 16px;
+  white-space: nowrap;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.p3-hero__btn-xl:hover {
+  background-color: #e04f05;
+}
+
+.p3-hero__btn-xl:active {
+  transform: scale(0.98);
+}
+
+.p3-hero__btn-arrow {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* ── Logo Sticky Bar (Negative Margin Sticky) ────────────────
+   position:sticky top:0; height:100vh
+   margin-top: JS에서 inline style
+   align-items:flex-end → 로고 화면 하단에
+   mix-blend-mode:difference → 배경 따라 자동 색상 반전
+   STICKY_EXTRA px 후 sticky 해제 → 자연스럽게 위로 올라가며 사라짐
+──────────────────────────────────────────────────────── */
+.p3-logo-sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;    /* 마퀴가 전체 너비를 채우도록 */
+  justify-content: flex-end;
+  padding-bottom: 24px;
+  box-sizing: border-box;
+  pointer-events: none;
+  z-index: 9999;
+  mix-blend-mode: difference;
+}
+
+/* ── Marquee 무한 슬라이드 ──────────────────────────────────── */
+/* 뷰포트 너비로 클립, overflow:hidden으로 바깥 숨김 */
+.p3-marquee {
+  width: 100%;
+  overflow: hidden;
+}
+
+/* 트랙: 슬롯들을 가로로 나열, 애니메이션으로 좌로 이동 */
+/* 9개 × 2세트 × 200px = 3600px → translateX(-1800px) 후 리셋 */
+.p3-marquee__track {
+  display: flex;
+  align-items: center;
+  width: max-content;
+  animation: p3-marquee-scroll 28s linear infinite;
+}
+
+/* 호버 시 일시정지 */
+.p3-marquee:hover .p3-marquee__track {
+  animation-play-state: paused;
+}
+
+@keyframes p3-marquee-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); } /* 세트 1 너비만큼 = 전체의 절반 */
+}
+
+/* 개별 로고 슬롯 */
+.p3-marquee__slot {
+  flex: 0 0 220px;
+  width: 220px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+}
+
+/* 로고 이미지: 가로 200px 고정, 비율 유지 */
+.p3-hero__partner-logo {
+  display: block;
+  width: 200px;
+  height: auto;
+  object-fit: contain;
+  opacity: 0.85;
+  filter: brightness(0) invert(1);
+}
+
+/* 1440px 이하: 로고 75%로 줄이기 */
+@media (max-width: 1440px) {
+  .p3-marquee__slot {
+    flex: 0 0 165px;
+    width: 165px;
+    height: 40px;
+    padding: 0 8px;
+  }
+  .p3-hero__partner-logo {
+    width: 150px;
+  }
+}
+
+/* 히어로 카드 위 로고바 — 카드와 함께 clip, 흰색 로고 */
+.p3-hero__partners--on-card {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding-bottom: 24px;
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* 카드 안 로고: 흰색 (다크 배경) */
+.p3-hero__partner-logo--white {
+  filter: none;
+  opacity: 0.85;
+}

@@ -1,0 +1,593 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+/* --- Reset & Global Variables --- */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --transition-speed: 0.4s;
+  --font-sans: 'Inter', sans-serif;
+  --font-display: 'Outfit', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+body, html {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  font-family: var(--font-sans);
+  background-color: #030712;
+  color: #f3f4f6;
+  scroll-behavior: smooth;
+}
+
+/* --- P1 Visibility Utility Classes --- */
+/* p1-only: body.theme-p1 없을 때 숨김 (GlobePhase, LightHeader에서 사용) */
+.p1-only {
+  display: none !important;
+  opacity: 0;
+  transition: opacity var(--transition-speed) ease;
+}
+
+body.theme-p1 .p1-only {
+  display: block !important;
+  opacity: 1;
+}
+body.theme-p1 .p1-only-flex {
+  display: flex !important;
+  opacity: 1;
+}
+body.theme-p1 .p1-only-grid {
+  display: grid !important;
+  opacity: 1;
+}
+
+/* Base Canvas for full-screen background placements */
+.bg-canvas-container {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+
+/* P1: 2D Flat Globe canvas — full screen hero background */
+.flat-canvas-container {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* --- PROPOSAL 1 (이롬넷 피그마 기반) --- */
+body.theme-p1 {
+  /* 흰색이 전역 배경 — 절대 fade 안 됨 */
+  background-color: #ffffff;
+  font-family: 'Pretendard', 'Inter', sans-serif;
+}
+
+/* 지구본 phase 동안 흰 body 위에 올라오는 어두운 overlay */
+#p1-dark-overlay {
+  position: fixed;
+  inset: 0;
+  background: #1c1a17;
+  z-index: 0;              /* flat canvas(z:1) 아래 */
+  pointer-events: none;
+  /* transition은 GSAP이 담당 */
+}
+
+/* --- P1 Hero --- */
+.p1-hero-section {
+  position: relative;
+  min-height: 100vh;
+  z-index: 10;
+}
+
+/* ─────────────────────────────────────────────────────────
+   P1 — DARK HEADER (::before state)
+   Figma 274:11907: 1920x72, bg=rgba(28,26,23,0.9), white text
+   z-index: 100
+───────────────────────────────────────────────────────── */
+.p1-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* Figma proposal=1: height=72px */
+  height: 72px;
+  display: flex;
+  align-items: center;
+  /* Figma: 1920px 기준 left/right padding=24px */
+  padding: 0 24px;
+}
+
+.p1-header--dark {
+  z-index: 100;
+  background: transparent;
+  /* 지구본 섹션에서는 헤더 없음 */
+  display: none;
+}
+
+/* ─────────────────────────────────────────────────────────
+   P1 — LIGHT HEADER (::after state, mask overlay)
+   Figma I344:11482: bg=rgba(255,255,255,0.92), dark text
+   z-index: 101, clip-path controlled by JS for mask reveal
+───────────────────────────────────────────────────────── */
+.p1-header--light {
+  z-index: 101;
+  background: transparent;
+  /* 지구본 설션에서 완전히 불표시 */
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.7s ease, visibility 0.7s ease;
+  pointer-events: none;
+}
+
+.p1-header--light.is-visible {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.p1-header-inner {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Left side: logo + separator + nav */
+.p1-header-left {
+  display: flex;
+  align-items: center;
+  /* Figma: logo(134) + gap(24) + sep(1) + gap(24) + nav(505) */
+  gap: 24px;
+}
+
+/* Logo — 이롬넷 SVG */
+/* Figma P1 dark: 127×30px  /  P1 light: 134×32px
+   LightHeader 컴포넌트는 light 전용이므로 32px 사용 */
+.p1-logo {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.p1-logo-img {
+  height: 32px;   /* Figma P1 light: 134×32px */
+  width: auto;
+  display: block;
+}
+
+/* Right side: social + cta */
+.p1-header-right {
+  display: flex;
+  align-items: center;
+  /* Figma: Socialbadge(168) + gap(12) + Button(182) = 362 */
+  gap: 12px;
+}
+
+/* Separator — dark header: rgba(255,255,255,0.1) */
+.p1-nav-separator {
+  width: 1px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+/* Separator — light header: rgba(28,26,23,0.1) */
+.p1-nav-separator--dark {
+  background: rgba(28, 26, 23, 0.1);
+}
+
+/* ── Nav ────────────────────────────────────────────────────── */
+.p1-nav {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+/* motion.div wrapper for stagger animation */
+.p1-nav-item-wrap {
+  display: flex;
+  align-items: center;
+}
+
+/* Logo — dark logo for light bg */
+.p1-logo-dark {
+  filter: brightness(0);
+}
+
+/* Nav 버튼 — button reset + Adyen style */
+.p1-nav-link {
+  appearance: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: 'Pretendard', 'Inter', sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0;
+  color: rgba(255, 255, 255, 1);
+  padding: 0 14px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  transition: opacity 0.18s ease;
+}
+.p1-nav-link--dark {
+  color: #1c1a17;
+}
+
+/* Adyen 그룹 hover: 다른 항목 dim */
+.p1-nav-link--dim {
+  opacity: 0.3;
+}
+
+/* 활성(hover) 항목: 굵기 변경 없이 동일 유지 */
+.p1-nav-link--active {
+  font-weight: 400;
+}
+
+/* ── 메가 드롭다운 (Adyen 스타일) ──────────────────────────── */
+/* 헤더(position:fixed) 내부에서 position:absolute top:72px
+   → 헤더 아래 전체 너비로 표시, overflow:hidden 미영향          */
+.p1-mega-menu {
+  position: absolute;
+  /* Figma: 헤더 72px 바로 아래 */
+  top: 72px;
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  z-index: 200;
+  height: calc(50vh - 72px);
+  overflow: hidden;
+}
+
+.p1-mega-menu__inner {
+  /* 널널한 top/bottom 패딩, 좌우 24px 고정 */
+  padding: 64px 24px 72px;
+  display: flex;
+  gap: 80px;
+  align-items: flex-start;
+}
+
+/* 좌측: 섹션 타이틀 */
+.p1-mega-menu__left {
+  width: 180px;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+.p1-mega-menu__title {
+  font-family: 'Pretendard', 'Inter', sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1c1a17;
+  line-height: 1.35;
+}
+
+/* 우측: 그룹들 가로 배치 */
+.p1-mega-menu__right {
+  display: flex;
+  gap: 56px;
+  flex: 1;
+}
+
+/* 각 그룹 */
+.p1-mega-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 130px;
+  margin-bottom: 32px;
+}
+.p1-mega-group:last-child {
+  margin-bottom: 0;
+}
+
+/* 카테고리 라벨 (Adyen: TYPES, CUSTOMERS 스타일) */
+.p1-mega-group__label {
+  font-family: 'Pretendard', 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: rgba(28, 26, 23, 0.38);
+  margin-bottom: 18px;
+  display: block;
+}
+
+/* 항목 링크 — 심플 텍스트 */
+.p1-mega-group__item {
+  font-family: 'Pretendard', 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  color: #1c1a17;
+  text-decoration: none;
+  line-height: 1.55;
+  display: block;
+  padding: 3px 0;
+  transition: opacity 0.15s ease;
+}
+.p1-mega-group__item:hover {
+  opacity: 0.5;
+}
+
+/* ── Adyen 스타일 아이템 리스트 ─────────────────────────────── */
+/* ul — 그룹 내 아이템 목록                                      */
+.p1-mega-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* li — 아이템 행: [대형 링크] [sep] [설명]                       */
+.p1-mega-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0;
+  padding: 11px 0;
+  transition: opacity 0.2s ease;
+}
+
+/* 대형 링크 텍스트 — Adyen variable-font-size-1.5 ≈ 22px        */
+.p1-mega-item__link {
+  font-family: 'Pretendard', 'Inter', sans-serif;
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1.26;
+  color: #1c1a17;
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+  letter-spacing: -0.02em;
+}
+
+/* 설명 + 세퍼레이터 컨테이너 — 기본 숨김, hover 시 표시         */
+.p1-mega-item__info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  margin-left: 14px;
+}
+
+/* 아이템 hover → 설명 표시 */
+.p1-mega-item:hover .p1-mega-item__info {
+  opacity: 1;
+}
+
+/* 세퍼레이터 라인 */
+.p1-mega-item__sep {
+  width: 1px;
+  height: 18px;
+  background: rgba(28, 26, 23, 0.18);
+  flex-shrink: 0;
+}
+
+/* 설명 텍스트 */
+.p1-mega-item__desc {
+  font-family: 'Pretendard', 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
+  color: rgba(28, 26, 23, 0.55);
+  margin: 0;
+  white-space: nowrap;
+}
+
+/* CSS :has() — 그룹 내 어느 아이템이라도 hover 되면 나머지 dim  */
+/* Adyen 원본: [ul:has(a:hover) &:not(:hover)]:opacity-30%        */
+.p1-mega-items:has(.p1-mega-item:hover) .p1-mega-item:not(:hover) {
+  opacity: 0.3;
+}
+
+/* 메가 메뉴 내 그룹: 좌측 타이틀을 크게 (Adyen: h2 large)       */
+.p1-mega-menu__title {
+  font-family: 'Pretendard', 'Inter', sans-serif;
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.26;
+  color: #1c1a17;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+/* ── CTA 버튼 — Adyen 식 text roll-up ──────────────────────── */
+.p1-btn-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 173, 98, 1);
+  color: rgba(35, 8, 0, 1);
+  border: none;
+  padding: 0 24px;
+  height: 48px;
+  width: 182px;
+  border-radius: 6px;
+  font-family: 'Pretendard', 'Inter', sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* Roll-up: 두 텍스트 레이어를 그리드로 겹침 */
+.p1-btn-roll-inner {
+  display: grid;
+  overflow: hidden;
+  padding: 4px 0;
+}
+.p1-btn-roll-front,
+.p1-btn-roll-back {
+  grid-area: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition:
+    transform 0.55s cubic-bezier(0.19, 1, 0.22, 1),
+    opacity   0.55s cubic-bezier(0.19, 1, 0.22, 1);
+}
+.p1-btn-roll-back {
+  transform: translateY(110%);
+  opacity: 0;
+}
+.p1-btn-cta--roll:hover .p1-btn-roll-front {
+  transform: translateY(-110%);
+  opacity: 0;
+}
+.p1-btn-cta--roll:hover .p1-btn-roll-back {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+
+/* =====================================================
+   P1 — HeroSection::after (Figma 339:11481)
+   Fixed panel, slides up over globe. Internally scrollable.
+   ===================================================== */
+
+/* ── Panel ─────────────────────────────────────────── */
+/* p1-hero-after: 흰 배경은 body에서 담당 — opacity 전환 없이 visibility로만 제어 */
+.p1-hero-after {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* 두 패널이 공유하는 풀스크린 베이스 */
+.p1-panel {
+  position: absolute;
+  inset: 0;
+  background: transparent; /* body가 흰색이므로 불필요 */
+  display: flex;
+  align-items: center; /* 수직 중앙 */
+  padding-top: 80px;   /* 헤더 높이 보정 */
+  box-sizing: border-box;
+}
+
+/* 바디 패널: 초기 �명 (opacity) */
+.p1-panel--body {
+  opacity: 0;
+}
+
+/* 바디 패널 fade-in */
+.p1-panel--body.is-visible {
+  opacity: 1;
+  transition: opacity 0.7s ease;
+}
+
+/* 타이틀 패널 fade-out */
+.p1-panel.fade-out {
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  pointer-events: none;
+}
+
+.p1-hero-after.is-visible {
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* 타이틀: 패널 안에서 flex center로 중앙 정렬 */
+.p1-ha-title-section {
+  padding: 0 240px;
+}
+
+.p1-curtain-wrapper {
+  position: relative;
+  /* 타이틀 패널 안에서 전체 너비 사용 + Figma 240px 좌우 여백 */
+  width: 100%;
+  padding: 0 clamp(20px, 16.7vw, 240px);
+  box-sizing: border-box;
+  /* 여유 있는 높이 설정 (폰트 크기의 1.25배) */
+  height: clamp(45px, 5.25vw, 100px);
+  overflow: hidden;
+}
+
+/* 두 텍스트 공통: 완전히 같은 위치, GSAP이 translateY 제어 */
+.p1-curtain-front,
+.p1-curtain-back {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  font-weight: 700;
+  font-size: clamp(36px, 4.2vw, 80px);
+  line-height: 1.25;
+  letter-spacing: -0.022em;
+  color: #1c1a17;
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* 영문 텍스트: Helvetica Regular */
+.p1-curtain-front {
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-weight: 400;
+}
+
+/* 국문 텍스트: Pretendard 상속 */
+.p1-curtain-back {
+  font-family: 'Pretendard', 'Inter', sans-serif;
+}
+
+
+/* 바디: 패널 안에서 flex center로 중앙 정렬 */
+.p1-ha-body-inner {
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  width: 100%;
+}
+
+/* 텍스트 쌍: 기본 50% 어둠, 활성화시 100% */
+.p1-body-pair {
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  padding: clamp(8px, 1vw, 18px) 0;
+  opacity: 0.5;
+  transition: opacity 0.4s ease;
+}
+
+.p1-body-pair.is-active {
+  opacity: 1;
+}
+
+/* Figma: Pretendard Medium 500, fontSize=60, lineHeightPx=72, letterSpacing=-0.62, color=#1c1a17 */
+.p1-body-line {
+  display: block;
+  font-family: 'Pretendard', 'Inter', sans-serif;
+  font-weight: 500;
+  font-size: clamp(20px, 3.1vw, 60px);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: #1c1a17;
+  text-align: center;
+}
+
+

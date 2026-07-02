@@ -1,0 +1,187 @@
+/* ================================================================
+   HeaderP3V1 — proposal=3 헤더 독립 CSS
+   Figma: 445:12334 (dark) / 445:12357 (light)
+   body.theme-p3 의존 없음 — 어디서든 임포트 가능
+   ================================================================ */
+
+/* ── Base ──────────────────────────────────────────────────── */
+.p3v1-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: flex-start;
+  padding-top: 8px;               /* inner(64) + pad(8) = 72px hug */
+  justify-content: center;
+  z-index: 99999;
+  box-sizing: border-box;
+  background: transparent;
+  border-bottom: none;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+/* Light mode */
+.p3v1-header--light {
+  background: #ffffff;
+  border-bottom: 1px solid rgba(28, 26, 23, 0.08);
+  box-shadow: 0 1px 10px rgba(0, 0, 0, 0.04);
+}
+
+/* ── Inner wrapper ─────────────────────────────────────────── */
+/* Figma: Container:css-transform h=72px (80-8), padding 0 240px */
+.p3v1-inner {
+  width: 100%;
+  max-width: 1440px;
+  height: 64px;
+  padding: 0 24px;                /* 고정 24px */
+  display: flex;
+  align-items: center;            /* 72px 안에서 center → 12px top/bottom */
+  justify-content: space-between;
+  box-sizing: border-box;
+}
+
+
+/* ── LEFT group ────────────────────────────────────────────── */
+/* Figma: logo(240) →24gap→ sep(391) →24gap→ nav(416) */
+.p3v1-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+/* ── Logo: 127×30px ────────────────────────────────────────── */
+.p3v1-logo {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  flex-shrink: 0;
+  line-height: 0;
+}
+.p3v1-logo img {
+  width: 127px;
+  height: 30px;
+  display: block;
+  transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              width  0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@media (max-width: 1440px) {
+  .p3v1-logo img { height: 26px; width: auto; }
+}
+
+/* ── Separator: 1×16px ─────────────────────────────────────── */
+.p3v1-sep {
+  width: 1px;
+  height: 16px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.1); /* dark: rgba(#fff, 10%) */
+  transition: background-color 0.3s ease;
+}
+.p3v1-header--light .p3v1-sep {
+  background: rgba(28, 26, 23, 0.1);    /* light: rgba(#1c1a17, 10%) */
+}
+
+/* ── Nav ───────────────────────────────────────────────────── */
+/* Figma: Menubar 420×36px (4개 합계) */
+.p3v1-nav {
+  display: flex;
+  align-items: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.p3v1-nav li {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* Figma 고정 너비 대신 P1처럼 좌우 패딩 14px */
+.p3v1-nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  height: 36px;                   /* Figma: nav row h=36 */
+  font-family: 'Pretendard', sans-serif;  /* 한글 네비 → Pretendard 전용 */
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: 0;
+  color: #ffffff;                 /* dark */
+  text-decoration: none;
+  white-space: nowrap;
+  transition: opacity 0.18s ease;
+}
+.p3v1-header--light .p3v1-nav-item {
+  color: #1c1a17;                 /* light */
+}
+.p3v1-nav-item:hover {
+  opacity: 0.55;
+}
+
+/* ── Button-XL: 182×48px, #ff6114, radius=6 ───────────────── */
+/* Figma: x=1498, pad-left=24px (1522-1498), text Regular 400 16px #ffffff */
+.p3v1-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 182px;
+  height: 48px;
+  padding: 0 24px;
+  border-radius: 6px;
+  background: #230800;
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  font-family: 'Pretendard', sans-serif;  /* CTA 한글 → Pretendard 전용 */
+  font-size: 16px;
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  transition:
+    height    0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    padding   0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    font-size 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    width     0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@media (max-width: 1440px) {
+  .p3v1-btn {
+    height: 38px;
+    padding: 0 16px;
+    font-size: 12px;
+    width: auto;
+  }
+}
+
+/* Roll-up hover animation (No background shift) */
+.p3v1-btn-inner {
+  display: grid;
+  overflow: hidden;
+  width: 100%;
+}
+.p3v1-btn-front,
+.p3v1-btn-back {
+  grid-area: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition:
+    transform 0.55s cubic-bezier(0.19, 1, 0.22, 1),
+    opacity   0.55s cubic-bezier(0.19, 1, 0.22, 1);
+}
+.p3v1-btn-back {
+  transform: translateY(110%);
+  opacity: 0;
+}
+.p3v1-btn--roll:hover .p3v1-btn-front {
+  transform: translateY(-110%);
+  opacity: 0;
+}
+.p3v1-btn--roll:hover .p3v1-btn-back {
+  transform: translateY(0);
+  opacity: 1;
+}

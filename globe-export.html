@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>Globe GIF Exporter</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #f5f5f5;
+      color: #1a1a1a;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding-bottom: 60px;
+    }
+    #canvas-wrap {
+      position: relative;
+      width: 500px;
+      height: 500px;
+      margin-top: 36px;
+      border-radius: 50%;
+      overflow: hidden;
+      background: #ffffff;
+      flex-shrink: 0;
+      box-shadow: 0 4px 32px rgba(0,0,0,0.10);
+    }
+    #globe-canvas {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .panel {
+      margin-top: 20px;
+      background: #ffffff;
+      border: 1px solid #e8e8e8;
+      border-radius: 16px;
+      padding: 20px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      width: 540px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+    }
+    .panel-title {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      color: #bbb;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+    .row { display: flex; gap: 10px; align-items: center; }
+    .row label { font-size: 13px; color: #666; min-width: 52px; }
+    input[type=number] {
+      width: 64px; background: #f5f5f5; border: 1px solid #ddd;
+      color: #1a1a1a; padding: 5px 8px; border-radius: 8px;
+      text-align: center; font-size: 14px;
+    }
+    input[type=range] { flex: 1; height: 4px; }
+    .val-label { font-size: 12px; color: #aaa; min-width: 36px; text-align: right; }
+    select {
+      background: #f5f5f5; color: #1a1a1a; border: 1px solid #ddd;
+      padding: 5px 10px; border-radius: 8px; font-size: 13px;
+    }
+    input[type=color] {
+      width: 36px; height: 28px; border: 1px solid #ddd; border-radius: 6px;
+      cursor: pointer; padding: 0; background: none;
+    }
+    .color-row { display: flex; gap: 8px; align-items: center; }
+    .color-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .seamless-tag {
+      font-size: 11px; color: #0064d2; background: rgba(0,100,210,0.08);
+      padding: 2px 8px; border-radius: 20px; margin-left: 6px;
+    }
+    #status { font-size: 13px; color: #0064d2; text-align: center; min-height: 18px; }
+    progress {
+      width: 100%; height: 5px; border-radius: 4px; appearance: none;
+    }
+    progress::-webkit-progress-bar { background: #eee; border-radius: 4px; }
+    progress::-webkit-progress-value { background: #0064d2; border-radius: 4px; }
+    #btn-record {
+      width: 100%; padding: 14px; border-radius: 12px; border: none;
+      font-size: 15px; font-weight: 600; cursor: pointer;
+      background: #1a1a1a; color: #fff; transition: all 0.2s;
+    }
+    #btn-record:hover { background: #333; }
+    #btn-record:disabled { background: #e0e0e0; color: #aaa; cursor: default; }
+    #preview {
+      margin-top: 24px; max-width: 400px; border-radius: 50%; display: none;
+    }
+    #download-link {
+      display: none; margin-top: 8px; color: #0064d2;
+      font-size: 13px; text-decoration: none;
+    }
+    #download-link:hover { color: #004da0; }
+    input[type=checkbox] { accent-color: #1a1a1a; width: 14px; height: 14px; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+<div id="canvas-wrap">
+  <canvas id="globe-canvas"></canvas>
+</div>
+
+<!-- 색상 & 투명도 -->
+<div class="panel">
+  <div class="panel-title">색상 / 투명도</div>
+
+  <div class="row">
+    <div class="color-dot" style="background:#FF7300"></div>
+    <label>육지 색</label>
+    <input type="color" id="color-land" value="#FF7300" />
+    <input type="range" id="alpha-land" min="0" max="100" value="90"
+           style="accent-color:#FF7300" />
+    <span class="val-label" id="alpha-land-val">90%</span>
+  </div>
+
+  <div class="row">
+    <div class="color-dot" style="background:#8B95A1"></div>
+    <label>바다 색</label>
+    <input type="color" id="color-sea" value="#8B95A1" />
+    <input type="range" id="alpha-sea" min="0" max="100" value="60"
+           style="accent-color:#8B95A1" />
+    <span class="val-label" id="alpha-sea-val">60%</span>
+  </div>
+
+  <div class="row">
+    <label>배경</label>
+    <select id="bg">
+      <option value="#ffffff" selected>흰색</option>
+      <option value="#f5f0eb">크림</option>
+      <option value="#f0f4f8">연회색</option>
+      <option value="#0d0d0d">검정</option>
+      <option value="#1c1a17">다크브라운</option>
+    </select>
+  </div>
+</div>
+
+<!-- 출력 설정 -->
+<div class="panel">
+  <div class="panel-title">출력 설정</div>
+
+  <div class="row">
+    <label>크기</label>
+    <input type="number" id="out-size" value="480" min="200" max="1000" step="40" />
+    <span style="color:#555;font-size:12px">px</span>
+    <label style="margin-left:12px">FPS</label>
+    <input type="number" id="fps" value="15" min="5" max="30" step="5" />
+  </div>
+
+  <div class="row">
+    <label>회전 속도</label>
+    <input type="range" id="speed" min="1" max="10" value="5" style="accent-color:#6cf" />
+    <span class="val-label" id="speed-val">5×</span>
+  </div>
+
+  <div class="row">
+    <input type="checkbox" id="seamless" checked />
+    <label for="seamless" style="cursor:pointer;min-width:auto">
+      Seamless loop (1회전 = <span id="loop-sec">?</span>초)
+    </label>
+    <span class="seamless-tag">권장</span>
+  </div>
+
+  <!-- seamless OFF 일 때만 표시 -->
+  <div class="row" id="dur-row" style="display:none">
+    <label>녹화 길이</label>
+    <input type="number" id="duration" value="5" min="1" max="30" step="1" />
+    <span style="color:#555;font-size:12px">초</span>
+  </div>
+</div>
+
+<div class="panel">
+  <div id="status">지구본 로딩 중...</div>
+  <progress id="prog" value="0" max="100" style="display:none"></progress>
+  <button id="btn-record" disabled>● GIF 녹화 시작</button>
+  <a id="download-link">📥 다시 다운로드</a>
+</div>
+
+<img id="preview" alt="GIF preview" />
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
+<script>
+'use strict';
+
+const CHARS        = ['$','€','£','¥','₩','₹'];
+const CHINA_EU     = 0.5 + 104 / 360;
+const SCROLL_SPEED = 1 / 25; // 1 full rotation per 25 seconds (1× speed)
+
+// ── Globe ────────────────────────────────────────────────────────────────────
+class Globe {
+  constructor(canvas, displaySize) {
+    this.canvas      = canvas;
+    this.displaySize = displaySize;
+    this.dpr         = window.devicePixelRatio || 1;
+
+    const half      = displaySize / 2;
+    this.drawRadius = Math.hypot(half, half);
+    this.clipRadius = this.drawRadius;
+    this.cx         = half;
+    this.cy         = half;
+
+    const physW = Math.round(displaySize * this.dpr);
+    canvas.width        = physW;
+    canvas.height       = physW;
+    canvas.style.width  = displaySize + 'px';
+    canvas.style.height = displaySize + 'px';
+
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    this.ctx = ctx;
+
+    this.scrollU    = 0;
+    this.globeAlpha = 0;
+    this.glyphs     = [];
+    this.lastTime   = 0;
+    this.earthData  = null;
+    this.earthW = this.earthH = 0;
+
+    this._loadMask();
+  }
+
+  _loadMask() {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = 'http://localhost:5176/earth-mask.jpg';
+    img.onload = () => {
+      const off = document.createElement('canvas');
+      off.width = img.naturalWidth; off.height = img.naturalHeight;
+      const oc = off.getContext('2d');
+      oc.drawImage(img, 0, 0);
+      const d = oc.getImageData(0, 0, img.naturalWidth, img.naturalHeight);
+      this.earthData = d.data;
+      this.earthW    = img.naturalWidth;
+      this.earthH    = img.naturalHeight;
+      this._buildGrid(65, 130);
+      this._fadeIn();
+    };
+    img.onerror = () => {
+      document.getElementById('status').textContent =
+        '⚠️ earth-mask 로드 실패 — localhost:5176 서버가 실행 중인지 확인';
+    };
+  }
+
+  _buildGrid(rows = 120, cols = 240) {
+    this.glyphs = [];
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const eu = c / cols, ev = r / rows;
+        const px = Math.min(Math.floor(eu * this.earthW), this.earthW - 1);
+        const py = Math.min(Math.floor(ev * this.earthH), this.earthH - 1);
+        const isLand = (this.earthData[(py * this.earthW + px) * 4] ?? 0) < 128;
+        this.glyphs.push({
+          eu, ev, isLand,
+          char:      CHARS[Math.floor(Math.random() * CHARS.length)],
+          variation: Math.random(),
+          timer:     Math.random() * 3,
+          interval:  0.7 + Math.random() * 2.8,
+          flash:     0,
+        });
+      }
+    }
+  }
+
+  _fadeIn() {
+    const start = performance.now(), dur = 1000;
+    this._startLoop();
+    const tick = (now) => {
+      this.globeAlpha = Math.min(1, (now - start) / dur);
+      if (this.globeAlpha < 1) requestAnimationFrame(tick);
+      else {
+        document.getElementById('btn-record').disabled = false;
+        document.getElementById('status').textContent = '준비 완료 ✓ — GIF 녹화 시작 버튼을 누르세요';
+      }
+    };
+    requestAnimationFrame(tick);
+  }
+
+  _startLoop() {
+    const loop = (now) => {
+      const speedMul = parseFloat(document.getElementById('speed').value);
+      const dt = Math.min((now - this.lastTime) / 1000, 0.05);
+      this.lastTime = now;
+      this.scrollU  = (this.scrollU + SCROLL_SPEED * speedMul * dt) % 1;
+      this._draw(dt, speedMul);
+      this.animId = requestAnimationFrame(loop);
+    };
+    this.animId = requestAnimationFrame(loop);
+  }
+
+  _draw(dt, speedMul = 1, overrideScrollU = null) {
+    const { ctx, cx, cy } = this;
+    const radius  = this.drawRadius;
+    const clipR2  = this.clipRadius * this.clipRadius;
+    const bgColor = document.getElementById('bg').value;
+    const colorLand = document.getElementById('color-land').value;
+    const colorSea  = document.getElementById('color-sea').value;
+    const alphaLand = parseInt(document.getElementById('alpha-land').value) / 100;
+    const alphaSea  = parseInt(document.getElementById('alpha-sea').value)  / 100;
+    const su = overrideScrollU !== null ? overrideScrollU : this.scrollU;
+
+    ctx.clearRect(0, 0, this.displaySize, this.displaySize);
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, this.displaySize, this.displaySize);
+
+    if (!this.earthData || this.glyphs.length === 0) return;
+
+    const scale    = (radius * 2) / this.earthH;
+    const earthPx  = this.earthW * scale;
+    const ROWS     = 120;
+    const circleR  = Math.max(4, (this.earthH * scale / ROWS) * 0.44);
+    const fontSize = Math.max(8, Math.round(circleR * 0.7));
+
+    ctx.font         = `100 ${fontSize}px sans-serif`;
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineWidth    = 0.6;
+
+    for (const g of this.glyphs) {
+      if (dt > 0) {
+        g.timer += dt;
+        if (g.timer >= g.interval) {
+          g.timer = 0; g.interval = 0.7 + Math.random() * 2.8;
+          g.char  = CHARS[Math.floor(Math.random() * CHARS.length)];
+          g.flash = 1;
+        }
+        if (g.flash > 0) g.flash = Math.max(0, g.flash - dt * 5);
+      }
+
+      const rawU = (g.eu - CHINA_EU + 0.5 - su + 100) % 1;
+      const sy   = cy + (g.ev - 0.5) * this.earthH * scale;
+
+      for (const uOff of [0, -1, 1]) {
+        const sx = cx + (rawU + uOff - 0.5) * earthPx;
+        if ((sx - cx) ** 2 + (sy - cy) ** 2 > clipR2) continue;
+
+        const mul  = g.isLand ? alphaLand : alphaSea;
+        const base = g.isLand
+          ? (0.58 + g.variation * 0.32) * mul
+          : (0.18 + g.variation * 0.18) * mul;
+        const alpha = Math.min(1, (base + g.flash * 0.35) * this.globeAlpha);
+        if (alpha <= 0.001) continue;
+
+        const color = g.isLand ? colorLand : colorSea;
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = color;
+        ctx.beginPath(); ctx.arc(sx, sy, circleR, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = color;
+        ctx.fillText(g.char, sx, sy);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  stop() { cancelAnimationFrame(this.animId); }
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+const PREVIEW_SIZE = 500;
+let globeInst = null;
+
+function initGlobe() {
+  const canvas = document.getElementById('globe-canvas');
+  if (globeInst) globeInst.stop();
+  document.getElementById('btn-record').disabled = true;
+  document.getElementById('status').textContent  = '지구본 로딩 중...';
+  globeInst = new Globe(canvas, PREVIEW_SIZE);
+}
+initGlobe();
+
+// ── 실시간 UI 업데이트 ───────────────────────────────────────────────────────
+function calcLoopSec() {
+  const fps      = parseInt(document.getElementById('fps').value);
+  const speedMul = parseFloat(document.getElementById('speed').value);
+  // 1 full rotation = 1 / (SCROLL_SPEED * speedMul) seconds
+  const sec = (1 / (SCROLL_SPEED * speedMul)).toFixed(1);
+  document.getElementById('loop-sec').textContent = sec;
+  return parseFloat(sec);
+}
+
+document.getElementById('alpha-land').addEventListener('input', e => {
+  document.getElementById('alpha-land-val').textContent = e.target.value + '%';
+});
+document.getElementById('alpha-sea').addEventListener('input', e => {
+  document.getElementById('alpha-sea-val').textContent = e.target.value + '%';
+});
+document.getElementById('speed').addEventListener('input', e => {
+  document.getElementById('speed-val').textContent = e.target.value + '×';
+  calcLoopSec();
+});
+document.getElementById('fps').addEventListener('change', calcLoopSec);
+document.getElementById('seamless').addEventListener('change', e => {
+  document.getElementById('dur-row').style.display = e.target.checked ? 'none' : 'flex';
+});
+// color dot 동기화
+document.getElementById('color-land').addEventListener('input', e => {
+  document.querySelector('.color-dot').style.background = e.target.value;
+});
+document.getElementById('color-sea').addEventListener('input', e => {
+  document.querySelectorAll('.color-dot')[1].style.background = e.target.value;
+});
+
+calcLoopSec(); // 초기 계산
+
+// ── GIF 녹화 ────────────────────────────────────────────────────────────────
+document.getElementById('btn-record').addEventListener('click', async () => {
+  const btn       = document.getElementById('btn-record');
+  const status    = document.getElementById('status');
+  const prog      = document.getElementById('prog');
+  const fps       = parseInt(document.getElementById('fps').value);
+  const outSize   = parseInt(document.getElementById('out-size').value);
+  const speedMul  = parseFloat(document.getElementById('speed').value);
+  const seamless  = document.getElementById('seamless').checked;
+  const bgColor   = document.getElementById('bg').value;
+  const frameMs   = 1000 / fps;
+
+  // ── 총 프레임 수 계산 ────────────────────────────────────────────────────
+  let totalFrames;
+  if (seamless) {
+    // 1회전에 필요한 정확한 프레임 수 (소수점 → 반올림)
+    // 1 rotation = 1 / (SCROLL_SPEED * speedMul) sec = fps / (SCROLL_SPEED * speedMul) frames
+    totalFrames = Math.round(fps / (SCROLL_SPEED * speedMul));
+  } else {
+    const durSec = parseInt(document.getElementById('duration').value);
+    totalFrames  = fps * durSec;
+  }
+
+  const durSec = (totalFrames / fps).toFixed(1);
+  btn.disabled = true;
+  prog.style.display = 'block';
+  prog.value = 0;
+
+  // ── 오프스크린 Globe ──────────────────────────────────────────────────────
+  const offCanvas = document.createElement('canvas');
+  offCanvas.width  = outSize;
+  offCanvas.height = outSize;
+
+  const offGlobe = new Globe(offCanvas, outSize);
+  offGlobe.scrollU    = globeInst.scrollU; // 현재 위치에서 시작
+  offGlobe.globeAlpha = 1;
+  offGlobe.stop();
+
+  const startScrollU = offGlobe.scrollU; // seamless 검증용
+
+  // earth 데이터 로드 대기
+  await new Promise(resolve => {
+    const check = () => offGlobe.earthData ? resolve() : setTimeout(check, 80);
+    check();
+  });
+
+  // ── scrollU 증분 (프레임당) ───────────────────────────────────────────────
+  const deltaU = SCROLL_SPEED * speedMul * (frameMs / 1000);
+
+  const gif = new GIF({
+    workers:      4,
+    quality:      6,
+    width:        outSize,
+    height:       outSize,
+    workerScript: 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js',
+  });
+
+  status.textContent = `녹화 중 (${totalFrames}프레임 / ${durSec}초)...`;
+
+  for (let i = 0; i < totalFrames; i++) {
+    // 정확한 scrollU로 그리기 (누적 오차 없음)
+    const su = seamless
+      ? (startScrollU + deltaU * i) % 1
+      : (offGlobe.scrollU);
+
+    offGlobe._draw(frameMs / 1000, speedMul, seamless ? su : null);
+    if (!seamless) offGlobe.scrollU = (offGlobe.scrollU + deltaU) % 1;
+
+    // 원형 마스크 적용
+    const masked = document.createElement('canvas');
+    masked.width = masked.height = outSize;
+    const mctx = masked.getContext('2d');
+    mctx.fillStyle = bgColor;
+    mctx.fillRect(0, 0, outSize, outSize);
+    mctx.save();
+    mctx.beginPath();
+    mctx.arc(outSize / 2, outSize / 2, outSize / 2, 0, Math.PI * 2);
+    mctx.clip();
+    mctx.drawImage(offCanvas, 0, 0);
+    mctx.restore();
+
+    gif.addFrame(masked, { delay: frameMs, copy: true });
+
+    prog.value = Math.round((i / totalFrames) * 55);
+    status.textContent = `녹화 중... ${i + 1} / ${totalFrames} 프레임`;
+    if (i % 5 === 0) await new Promise(r => setTimeout(r, 0)); // UI yield
+  }
+
+  offGlobe.stop();
+  status.textContent = 'GIF 인코딩 중...';
+
+  gif.on('progress', p => {
+    prog.value = 55 + Math.round(p * 45);
+    status.textContent = `인코딩 중... ${Math.round(p * 100)}%`;
+  });
+
+  gif.on('finished', blob => {
+    const url      = URL.createObjectURL(blob);
+    const filename = `globe_${outSize}px_${fps}fps_${speedMul}x${seamless ? '_loop' : ''}.gif`;
+
+    const preview = document.getElementById('preview');
+    preview.src          = url;
+    preview.style.display = 'block';
+
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+
+    const dl = document.getElementById('download-link');
+    dl.href = url; dl.download = filename; dl.style.display = 'block';
+
+    btn.disabled       = false;
+    prog.style.display = 'none';
+    status.textContent =
+      `✅ 완료! ${seamless ? '🔁 Seamless loop ' : ''}(${(blob.size/1024/1024).toFixed(2)} MB)`;
+  });
+
+  gif.render();
+});
+</script>
+</body>
+</html>
