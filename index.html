@@ -453,12 +453,17 @@ document.getElementById('btn-record').addEventListener('click', async () => {
   // ── scrollU 증분 (프레임당) ───────────────────────────────────────────────
   const deltaU = SCROLL_SPEED * speedMul * (frameMs / 1000);
 
+  // ── gif.worker CORS 우회: CDN 스크립트 → blob URL 변환 ──────────────────
+  const workerUrl = await fetch('https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js')
+    .then(r => r.text())
+    .then(code => URL.createObjectURL(new Blob([code], { type: 'application/javascript' })));
+
   const gif = new GIF({
     workers:      4,
     quality:      6,
     width:        outSize,
     height:       outSize,
-    workerScript: 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js',
+    workerScript: workerUrl,
   });
 
   status.textContent = `녹화 중 (${totalFrames}프레임 / ${durSec}초)...`;
