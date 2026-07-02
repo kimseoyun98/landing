@@ -575,7 +575,7 @@ document.getElementById('btn-record').addEventListener('click', async () => {
     mctx.beginPath();
     mctx.arc(outSize / 2, outSize / 2, outSize / 2, 0, Math.PI * 2);
     mctx.clip();
-    mctx.drawImage(offCanvas, 0, 0);
+    mctx.drawImage(offCanvas, 0, 0, outSize, outSize);
     mctx.restore();
 
     gif.addFrame(masked, { delay: frameMs, copy: true });
