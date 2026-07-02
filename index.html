@@ -170,6 +170,31 @@
     <input type="number" id="duration" value="5" min="1" max="30" step="1" />
     <span style="color:#555;font-size:12px">초</span>
   </div>
+
+  <!-- 출력 미리보기 -->
+  <div style="display:flex;align-items:center;gap:20px;padding-top:4px;border-top:1px solid #f0f0f0;margin-top:4px">
+    <!-- 크기 시각화: 최대 160px 컨테이너 안에 상대 크기로 표시 -->
+    <div style="position:relative;width:160px;height:160px;flex-shrink:0">
+      <div id="size-ring" style="
+        position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+        border-radius:50%;
+        border:2px solid #1a1a1a;
+        background:#f8f8f8;
+        transition:width 0.2s,height 0.2s;
+        overflow:hidden;
+      ">
+        <canvas id="size-preview-canvas" style="width:100%;height:100%;border-radius:50%"></canvas>
+      </div>
+      <!-- 크기 기준선 (160px 점선 원) -->
+      <div style="position:absolute;inset:0;border-radius:50%;border:1px dashed #ddd;pointer-events:none"></div>
+    </div>
+    <div>
+      <div id="size-px-label" style="font-size:22px;font-weight:700;color:#1a1a1a;line-height:1">480 × 480</div>
+      <div style="font-size:11px;color:#aaa;margin-top:2px">px</div>
+      <div id="size-frames-label" style="font-size:12px;color:#888;margin-top:10px"></div>
+      <div id="size-est-label" style="font-size:12px;color:#aaa;margin-top:2px"></div>
+    </div>
+  </div>
 </div>
 
 <div class="panel">
@@ -403,6 +428,70 @@ document.getElementById('color-sea').addEventListener('input', e => {
 });
 
 calcLoopSec(); // 초기 계산
+
+// ── 출력 크기 미리보기 ──────────────────────────────────────────────────────
+const MAX_RING = 160; // 컨테이너 최대 px
+const MAX_SIZE = 1000; // out-size 최대값
+
+function updateSizePreview() {
+  const outSize  = parseInt(document.getElementById('out-size').value) || 480;
+  const fps      = parseInt(document.getElementById('fps').value) || 15;
+  const speedMul = parseFloat(document.getElementById('speed').value) || 5;
+  const seamless = document.getElementById('seamless').checked;
+
+  // ── 원 크기: outSize에 비례해 MAX_RING 안에 맞춤 ──
+  const ringPx = Math.round((outSize / MAX_SIZE) * MAX_RING);
+  const clampedPx = Math.max(32, Math.min(ringPx, MAX_RING));
+  const ring = document.getElementById('size-ring');
+  ring.style.width  = clampedPx + 'px';
+  ring.style.height = clampedPx + 'px';
+
+  // ── 미리보기 캔버스에 현재 지구본 복사 ──
+  const previewCanvas = document.getElementById('size-preview-canvas');
+  previewCanvas.width  = clampedPx;
+  previewCanvas.height = clampedPx;
+  const pCtx = previewCanvas.getContext('2d');
+  const srcCanvas = document.getElementById('globe-canvas');
+  if (srcCanvas) {
+    pCtx.save();
+    pCtx.beginPath();
+    pCtx.arc(clampedPx/2, clampedPx/2, clampedPx/2, 0, Math.PI*2);
+    pCtx.clip();
+    pCtx.drawImage(srcCanvas, 0, 0, clampedPx, clampedPx);
+    pCtx.restore();
+  }
+
+  // ── 레이블 ──
+  document.getElementById('size-px-label').textContent = `${outSize} × ${outSize}`;
+
+  // 프레임 수 계산
+  const totalFrames = seamless
+    ? Math.round(fps / (SCROLL_SPEED * speedMul))
+    : fps * (parseInt(document.getElementById('duration')?.value) || 5);
+  const durSec = (totalFrames / fps).toFixed(1);
+  document.getElementById('size-frames-label').textContent =
+    `${totalFrames}프레임 · ${durSec}초`;
+
+  // 예상 파일 크기 (rough: pixels * frames * compression_factor)
+  const estKB = Math.round((outSize * outSize * totalFrames * 0.08) / 1024);
+  const estStr = estKB > 1024
+    ? `약 ${(estKB/1024).toFixed(1)} MB`
+    : `약 ${estKB} KB`;
+  document.getElementById('size-est-label').textContent = `예상 ${estStr}`;
+}
+
+// 관련 입력 변경 시 미리보기 업데이트
+['out-size','fps','speed','seamless','duration'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', updateSizePreview);
+  if (el) el.addEventListener('change', updateSizePreview);
+});
+
+// 지구본 로딩 완료 후 + 매 2초마다 미리보기 갱신 (지구본 회전 반영)
+setInterval(updateSizePreview, 2000);
+updateSizePreview();
+
+
 
 // ── GIF 녹화 ────────────────────────────────────────────────────────────────
 document.getElementById('btn-record').addEventListener('click', async () => {
