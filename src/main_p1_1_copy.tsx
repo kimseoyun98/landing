@@ -1,0 +1,15 @@
+import { StrictMode } from 'react';
+import { createRoot }  from 'react-dom/client';
+import App from './App_p1_1_copy';
+import './style.css';
+
+// 새로고침 시 항상 최상단으로
+if (typeof history !== 'undefined') history.scrollRestoration = 'manual';
+window.scrollTo(0, 0);
+
+const root = document.getElementById('root')!;
+createRoot(root).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);

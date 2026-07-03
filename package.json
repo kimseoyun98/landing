@@ -7,6 +7,8 @@
     "dev": "npm run dev:p1",
     "dev:p1": "vite --config vite.config.p1.ts",
     "dev:p1-1": "vite --config vite.config.p1-1.ts",
+    "dev:p1-1-copy": "vite --config vite.config.p1-1-copy.ts",
+    "dev:globe2": "vite --config vite.config.globe2.ts",
     "dev:p1-2": "vite --config vite.config.p1-2.ts",
     "dev:p2": "vite --config vite.config.p2.ts",
     "dev:p3": "vite --config vite.config.p3.ts",
@@ -20,6 +22,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/three": "^0.184.1",
     "@vitejs/plugin-react": "^6.0.2",
+    "playwright": "^1.61.1",
     "typescript": "~6.0.2",
     "vite": "^8.0.12"
   },
