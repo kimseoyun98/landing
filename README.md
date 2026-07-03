@@ -46,3 +46,7 @@ npm run dev:p1 & npm run dev:p2 & npm run dev:p3
 - Three.js (3D 글로브)
 - Framer Motion
 - Vite
+
+## 개발 환경
+
+- Windows PC 연결 완료 (2026-07-03)
