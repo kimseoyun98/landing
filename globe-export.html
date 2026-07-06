@@ -2,525 +2,635 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>Globe GIF Exporter</title>
+  <title>Globe Viewer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
     body {
-      background: #f5f5f5;
+      font-family: 'Inter', sans-serif;
+      background: #f4f4f4;
       color: #1a1a1a;
-      font-family: 'Helvetica Neue', Arial, sans-serif;
+      min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      min-height: 100vh;
-      padding-bottom: 60px;
+      padding: 32px 0 60px;
     }
-    #canvas-wrap {
-      position: relative;
+
+    h1 {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+      color: #1a1a1a;
+      margin-bottom: 24px;
+    }
+
+    /* ── Tabs ─────────────────────────────────────────────── */
+    .tabs {
+      display: flex;
+      gap: 6px;
+      background: #fff;
+      border: 1px solid #e8e8e8;
+      border-radius: 12px;
+      padding: 4px;
+      margin-bottom: 24px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+    .tab {
+      padding: 8px 18px;
+      border: none;
+      background: none;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      color: #888;
+      cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+    .tab:hover { background: #f5f5f5; color: #333; }
+    .tab.active { background: #1a1a1a; color: #fff; }
+
+    /* ── Globe canvas ─────────────────────────────────────── */
+    .globe-wrap {
       width: 500px;
       height: 500px;
-      margin-top: 36px;
       border-radius: 50%;
       overflow: hidden;
-      background: #ffffff;
+      position: relative;
+      box-shadow: 0 8px 40px rgba(0,0,0,.12);
       flex-shrink: 0;
-      box-shadow: 0 4px 32px rgba(0,0,0,0.10);
     }
     #globe-canvas {
       position: absolute;
       top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
+      transform: translate(-50%,-50%);
     }
+
+    /* ── Controls ─────────────────────────────────────────── */
     .panel {
       margin-top: 20px;
-      background: #ffffff;
+      background: #fff;
       border: 1px solid #e8e8e8;
       border-radius: 16px;
-      padding: 20px 28px;
+      padding: 18px 24px;
+      width: 540px;
+      box-shadow: 0 1px 6px rgba(0,0,0,.05);
       display: flex;
       flex-direction: column;
       gap: 14px;
-      width: 540px;
-      box-shadow: 0 1px 6px rgba(0,0,0,0.06);
     }
     .panel-title {
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 600;
-      letter-spacing: 0.1em;
+      letter-spacing: .1em;
       color: #bbb;
       text-transform: uppercase;
-      margin-bottom: 2px;
     }
     .row { display: flex; gap: 10px; align-items: center; }
-    .row label { font-size: 13px; color: #666; min-width: 52px; }
-    input[type=number] {
-      width: 64px; background: #f5f5f5; border: 1px solid #ddd;
-      color: #1a1a1a; padding: 5px 8px; border-radius: 8px;
-      text-align: center; font-size: 14px;
-    }
-    input[type=range] { flex: 1; height: 4px; }
-    .val-label { font-size: 12px; color: #aaa; min-width: 36px; text-align: right; }
-    select {
-      background: #f5f5f5; color: #1a1a1a; border: 1px solid #ddd;
-      padding: 5px 10px; border-radius: 8px; font-size: 13px;
-    }
+    .row label { font-size: 13px; color: #666; min-width: 60px; }
+    .val { font-size: 12px; color: #aaa; min-width: 34px; text-align: right; }
+    input[type=range] { flex: 1; height: 4px; accent-color: #1a1a1a; }
     input[type=color] {
-      width: 36px; height: 28px; border: 1px solid #ddd; border-radius: 6px;
-      cursor: pointer; padding: 0; background: none;
+      width: 32px; height: 26px; border: 1px solid #ddd;
+      border-radius: 6px; cursor: pointer; padding: 0;
     }
-    .color-row { display: flex; gap: 8px; align-items: center; }
-    .color-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-    .seamless-tag {
-      font-size: 11px; color: #0064d2; background: rgba(0,100,210,0.08);
-      padding: 2px 8px; border-radius: 20px; margin-left: 6px;
+    .status-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: #4caf50; flex-shrink: 0;
     }
-    #status { font-size: 13px; color: #0064d2; text-align: center; min-height: 18px; }
-    progress {
-      width: 100%; height: 5px; border-radius: 4px; appearance: none;
+    #status-text { font-size: 12px; color: #888; }
+
+    /* ── Globe desc chip ──────────────────────────────────── */
+    .desc-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 11px; color: #888;
+      background: #f5f5f5; border-radius: 20px;
+      padding: 4px 10px;
     }
-    progress::-webkit-progress-bar { background: #eee; border-radius: 4px; }
-    progress::-webkit-progress-value { background: #0064d2; border-radius: 4px; }
-    #btn-record {
-      width: 100%; padding: 14px; border-radius: 12px; border: none;
-      font-size: 15px; font-weight: 600; cursor: pointer;
-      background: #1a1a1a; color: #fff; transition: all 0.2s;
-    }
-    #btn-record:hover { background: #333; }
-    #btn-record:disabled { background: #e0e0e0; color: #aaa; cursor: default; }
-    #preview {
-      margin-top: 24px; max-width: 400px; border-radius: 50%; display: none;
-    }
-    #download-link {
-      display: none; margin-top: 8px; color: #0064d2;
-      font-size: 13px; text-decoration: none;
-    }
-    #download-link:hover { color: #004da0; }
-    input[type=checkbox] { accent-color: #1a1a1a; width: 14px; height: 14px; cursor: pointer; }
   </style>
 </head>
 <body>
 
-<div id="canvas-wrap">
+<h1>Globe Viewer</h1>
+
+<!-- Tab switcher -->
+<div class="tabs">
+  <button class="tab active" data-g="1">Globe 1 · 화폐 문자</button>
+  <button class="tab"        data-g="2">Globe 2 · 구면 투영</button>
+  <button class="tab"        data-g="3">Globe 3 · 코인</button>
+</div>
+
+<!-- Canvas -->
+<div class="globe-wrap" id="globe-wrap">
   <canvas id="globe-canvas"></canvas>
 </div>
 
-<!-- 색상 & 투명도 -->
+<!-- Controls -->
 <div class="panel">
-  <div class="panel-title">색상 / 투명도</div>
-
-  <div class="row">
-    <div class="color-dot" style="background:#FF7300"></div>
-    <label>육지 색</label>
-    <input type="color" id="color-land" value="#FF7300" />
-    <input type="range" id="alpha-land" min="0" max="100" value="90"
-           style="accent-color:#FF7300" />
-    <span class="val-label" id="alpha-land-val">90%</span>
+  <div class="panel-title">색상</div>
+  <!-- Globe 1 & 2 controls -->
+  <div id="ctrl-g1g2">
+    <div class="row" style="margin-bottom:10px">
+      <span class="desc-chip" id="globe-desc">화폐 글리프 · 평면 투영 · 회전 25초</span>
+    </div>
+    <div class="row">
+      <div style="width:10px;height:10px;border-radius:50%;background:#FF7300;flex-shrink:0"></div>
+      <label>육지 색</label>
+      <input type="color" id="color-land" value="#FF7300" />
+      <input type="range" id="alpha-land" min="0" max="100" value="90" />
+      <span class="val" id="al-val">90%</span>
+    </div>
+    <div class="row">
+      <div style="width:10px;height:10px;border-radius:50%;background:#8B95A1;flex-shrink:0"></div>
+      <label>바다 색</label>
+      <input type="color" id="color-sea" value="#8B95A1" />
+      <input type="range" id="alpha-sea" min="0" max="100" value="60" />
+      <span class="val" id="as-val">60%</span>
+    </div>
+    <div class="row">
+      <label>배경</label>
+      <select id="bg-sel" style="background:#f5f5f5;color:#1a1a1a;border:1px solid #ddd;padding:5px 10px;border-radius:8px;font-size:13px">
+        <option value="#ffffff" selected>흰색</option>
+        <option value="#f5f0eb">크림</option>
+        <option value="#0d0d0d">검정</option>
+        <option value="#1c1a17">다크브라운</option>
+      </select>
+    </div>
   </div>
 
-  <div class="row">
-    <div class="color-dot" style="background:#8B95A1"></div>
-    <label>바다 색</label>
-    <input type="color" id="color-sea" value="#8B95A1" />
-    <input type="range" id="alpha-sea" min="0" max="100" value="60"
-           style="accent-color:#8B95A1" />
-    <span class="val-label" id="alpha-sea-val">60%</span>
-  </div>
-
-  <div class="row">
-    <label>배경</label>
-    <select id="bg">
-      <option value="#ffffff" selected>흰색</option>
-      <option value="#f5f0eb">크림</option>
-      <option value="#f0f4f8">연회색</option>
-      <option value="#0d0d0d">검정</option>
-      <option value="#1c1a17">다크브라운</option>
-    </select>
+  <!-- Globe 3 (coin) controls -->
+  <div id="ctrl-g3" style="display:none">
+    <div class="row" style="margin-bottom:10px">
+      <span class="desc-chip">코인 그리드 · 헥스 배치 · 회전 20초</span>
+    </div>
+    <div class="row">
+      <label>배경색</label>
+      <input type="color" id="coin-bg" value="#FF7300" />
+    </div>
+    <div class="row">
+      <label>코인색</label>
+      <input type="color" id="coin-fg" value="#FFFFFF" />
+    </div>
   </div>
 </div>
 
-<!-- 출력 설정 -->
 <div class="panel">
-  <div class="panel-title">출력 설정</div>
-
-  <div class="row">
-    <label>크기</label>
-    <input type="number" id="out-size" value="480" min="200" max="1000" step="40" />
-    <span style="color:#555;font-size:12px">px</span>
-    <label style="margin-left:12px">FPS</label>
-    <input type="number" id="fps" value="15" min="5" max="30" step="5" />
-  </div>
-
+  <div class="panel-title">속도</div>
   <div class="row">
     <label>회전 속도</label>
-    <input type="range" id="speed" min="1" max="10" value="5" style="accent-color:#6cf" />
-    <span class="val-label" id="speed-val">5×</span>
-  </div>
-
-  <div class="row">
-    <input type="checkbox" id="seamless" checked />
-    <label for="seamless" style="cursor:pointer;min-width:auto">
-      Seamless loop (1회전 = <span id="loop-sec">?</span>초)
-    </label>
-    <span class="seamless-tag">권장</span>
-  </div>
-
-  <!-- seamless OFF 일 때만 표시 -->
-  <div class="row" id="dur-row" style="display:none">
-    <label>녹화 길이</label>
-    <input type="number" id="duration" value="5" min="1" max="30" step="1" />
-    <span style="color:#555;font-size:12px">초</span>
+    <input type="range" id="speed" min="1" max="10" value="5" />
+    <span class="val" id="sp-val">5×</span>
   </div>
 </div>
 
-<div class="panel">
-  <div id="status">지구본 로딩 중...</div>
-  <progress id="prog" value="0" max="100" style="display:none"></progress>
-  <button id="btn-record" disabled>● GIF 녹화 시작</button>
-  <a id="download-link">📥 다시 다운로드</a>
+<div class="panel" style="flex-direction:row; align-items:center; gap:10px; padding:14px 24px">
+  <div class="status-dot" id="status-dot"></div>
+  <span id="status-text">로딩 중...</span>
 </div>
 
-<img id="preview" alt="GIF preview" />
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
 <script>
 'use strict';
 
-const CHARS        = ['$','€','£','¥','₩','₹'];
-const CHINA_EU     = 0.5 + 104 / 360;
-const SCROLL_SPEED = 1 / 25; // 1 full rotation per 25 seconds (1× speed)
+// ═══════════════════════════════════════════════════════════════════════
+// Shared
+// ═══════════════════════════════════════════════════════════════════════
+const EARTH_URL   = 'http://localhost:5176/earth-mask.jpg';
+const CHARS       = ['$','€','£','¥','₩','₹'];
+const CHINA_EU    = 0.5 + 104 / 360;
+const SIZE        = 500;       // canvas display size
+const DPR         = window.devicePixelRatio || 1;
 
-// ── Globe ────────────────────────────────────────────────────────────────────
-class Globe {
-  constructor(canvas, displaySize) {
-    this.canvas      = canvas;
-    this.displaySize = displaySize;
-    this.dpr         = window.devicePixelRatio || 1;
+function easeOutBack(t) {
+  const c1 = 1.70158, c3 = c1 + 1;
+  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+}
 
-    const half      = displaySize / 2;
-    this.drawRadius = Math.hypot(half, half);
-    this.clipRadius = this.drawRadius;
-    this.cx         = half;
-    this.cy         = half;
+// Load earth mask once, share across all globes
+let earthData = null, earthW = 0, earthH = 0;
+let earthReady = false;
+const earthCallbacks = [];
 
-    const physW = Math.round(displaySize * this.dpr);
-    canvas.width        = physW;
-    canvas.height       = physW;
-    canvas.style.width  = displaySize + 'px';
-    canvas.style.height = displaySize + 'px';
+function loadEarth(cb) {
+  if (earthReady) { cb(); return; }
+  earthCallbacks.push(cb);
+  if (earthCallbacks.length > 1) return; // already loading
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.src = EARTH_URL;
+  img.onload = () => {
+    const off = document.createElement('canvas');
+    off.width = img.naturalWidth; off.height = img.naturalHeight;
+    const oc = off.getContext('2d');
+    oc.drawImage(img, 0, 0);
+    const d = oc.getImageData(0, 0, img.naturalWidth, img.naturalHeight);
+    earthData = d.data; earthW = img.naturalWidth; earthH = img.naturalHeight;
+    earthReady = true;
+    setStatus('준비 완료 ✓');
+    earthCallbacks.forEach(f => f());
+  };
+  img.onerror = () => setStatus('⚠️ earth-mask 로드 실패 — localhost:5176 서버 확인');
+}
 
-    const ctx = canvas.getContext('2d');
-    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    this.ctx = ctx;
+function setStatus(msg) {
+  document.getElementById('status-text').textContent = msg;
+}
 
+// ── Canvas setup ───────────────────────────────────────────────────────
+const canvas = document.getElementById('globe-canvas');
+canvas.width  = Math.round(SIZE * DPR);
+canvas.height = Math.round(SIZE * DPR);
+canvas.style.width  = SIZE + 'px';
+canvas.style.height = SIZE + 'px';
+const ctx = canvas.getContext('2d');
+ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+const CX = SIZE / 2, CY = SIZE / 2;
+
+// ═══════════════════════════════════════════════════════════════════════
+// Globe 1 — flat equirectangular, stroke-only glyphs
+// ═══════════════════════════════════════════════════════════════════════
+class Globe1 {
+  constructor() {
     this.scrollU    = 0;
-    this.globeAlpha = 0;
-    this.glyphs     = [];
     this.lastTime   = 0;
-    this.earthData  = null;
-    this.earthW = this.earthH = 0;
-
-    this._loadMask();
+    this.glyphs     = [];
+    this.drawRadius = Math.hypot(CX, CY);
+    this.clipRadius = this.drawRadius;
+    this._build();
   }
-
-  _loadMask() {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.src = 'http://localhost:5176/earth-mask.jpg';
-    img.onload = () => {
-      const off = document.createElement('canvas');
-      off.width = img.naturalWidth; off.height = img.naturalHeight;
-      const oc = off.getContext('2d');
-      oc.drawImage(img, 0, 0);
-      const d = oc.getImageData(0, 0, img.naturalWidth, img.naturalHeight);
-      this.earthData = d.data;
-      this.earthW    = img.naturalWidth;
-      this.earthH    = img.naturalHeight;
-      this._buildGrid(65, 130);
-      this._fadeIn();
-    };
-    img.onerror = () => {
-      document.getElementById('status').textContent =
-        '⚠️ earth-mask 로드 실패 — localhost:5176 서버가 실행 중인지 확인';
-    };
-  }
-
-  _buildGrid(rows = 120, cols = 240) {
+  _build() {
+    if (!earthReady) return;
     this.glyphs = [];
+    const rows = 65, cols = 130;
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         const eu = c / cols, ev = r / rows;
-        const px = Math.min(Math.floor(eu * this.earthW), this.earthW - 1);
-        const py = Math.min(Math.floor(ev * this.earthH), this.earthH - 1);
-        const isLand = (this.earthData[(py * this.earthW + px) * 4] ?? 0) < 128;
+        const px = Math.min(Math.floor(eu * earthW), earthW - 1);
+        const py = Math.min(Math.floor(ev * earthH), earthH - 1);
+        const isLand = (earthData[(py * earthW + px) * 4] ?? 0) < 128;
         this.glyphs.push({
           eu, ev, isLand,
-          char:      CHARS[Math.floor(Math.random() * CHARS.length)],
-          variation: Math.random(),
-          timer:     Math.random() * 3,
-          interval:  0.7 + Math.random() * 2.8,
-          flash:     0,
+          char: CHARS[Math.floor(Math.random() * CHARS.length)],
+          variation: Math.random(), timer: Math.random()*3,
+          interval: 0.7 + Math.random()*2.8, flash: 0,
         });
       }
     }
   }
-
-  _fadeIn() {
-    const start = performance.now(), dur = 1000;
-    this._startLoop();
-    const tick = (now) => {
-      this.globeAlpha = Math.min(1, (now - start) / dur);
-      if (this.globeAlpha < 1) requestAnimationFrame(tick);
-      else {
-        document.getElementById('btn-record').disabled = false;
-        document.getElementById('status').textContent = '준비 완료 ✓ — GIF 녹화 시작 버튼을 누르세요';
-      }
-    };
-    requestAnimationFrame(tick);
-  }
-
-  _startLoop() {
-    const loop = (now) => {
-      const speedMul = parseFloat(document.getElementById('speed').value);
-      const dt = Math.min((now - this.lastTime) / 1000, 0.05);
-      this.lastTime = now;
-      this.scrollU  = (this.scrollU + SCROLL_SPEED * speedMul * dt) % 1;
-      this._draw(dt, speedMul);
-      this.animId = requestAnimationFrame(loop);
-    };
-    this.animId = requestAnimationFrame(loop);
-  }
-
-  _draw(dt, speedMul = 1, overrideScrollU = null) {
-    const { ctx, cx, cy } = this;
-    const radius  = this.drawRadius;
-    const clipR2  = this.clipRadius * this.clipRadius;
-    const bgColor = document.getElementById('bg').value;
-    const colorLand = document.getElementById('color-land').value;
-    const colorSea  = document.getElementById('color-sea').value;
-    const alphaLand = parseInt(document.getElementById('alpha-land').value) / 100;
-    const alphaSea  = parseInt(document.getElementById('alpha-sea').value)  / 100;
-    const su = overrideScrollU !== null ? overrideScrollU : this.scrollU;
-
-    ctx.clearRect(0, 0, this.displaySize, this.displaySize);
-    ctx.fillStyle = bgColor;
-    ctx.fillRect(0, 0, this.displaySize, this.displaySize);
-
-    if (!this.earthData || this.glyphs.length === 0) return;
-
-    const scale    = (radius * 2) / this.earthH;
-    const earthPx  = this.earthW * scale;
-    const ROWS     = 120;
-    const circleR  = Math.max(4, (this.earthH * scale / ROWS) * 0.44);
+  draw(dt, speedMul, colorLand, colorSea, alphaLand, alphaSea, bgColor) {
+    this.scrollU = (this.scrollU + (1/25) * speedMul * dt) % 1;
+    const r = this.drawRadius;
+    const clipR2 = this.clipRadius * this.clipRadius;
+    const scale = (r * 2) / earthH;
+    const earthPx = earthW * scale;
+    const ROWS = 120;
+    const circleR = Math.max(4, (earthH * scale / ROWS) * 0.44);
     const fontSize = Math.max(8, Math.round(circleR * 0.7));
 
-    ctx.font         = `100 ${fontSize}px sans-serif`;
-    ctx.textAlign    = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.lineWidth    = 0.6;
+    ctx.clearRect(0, 0, SIZE, SIZE);
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, SIZE, SIZE);
+
+    if (!earthReady || !this.glyphs.length) return;
+
+    ctx.font = `100 ${fontSize}px sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 0.6;
 
     for (const g of this.glyphs) {
-      if (dt > 0) {
-        g.timer += dt;
-        if (g.timer >= g.interval) {
-          g.timer = 0; g.interval = 0.7 + Math.random() * 2.8;
-          g.char  = CHARS[Math.floor(Math.random() * CHARS.length)];
-          g.flash = 1;
-        }
-        if (g.flash > 0) g.flash = Math.max(0, g.flash - dt * 5);
+      g.timer += dt;
+      if (g.timer >= g.interval) {
+        g.timer = 0; g.interval = 0.7 + Math.random()*2.8;
+        g.char = CHARS[Math.floor(Math.random()*CHARS.length)]; g.flash = 1;
       }
+      if (g.flash > 0) g.flash = Math.max(0, g.flash - dt*5);
 
-      const rawU = (g.eu - CHINA_EU + 0.5 - su + 100) % 1;
-      const sy   = cy + (g.ev - 0.5) * this.earthH * scale;
+      const rawU = (g.eu - CHINA_EU + 0.5 - this.scrollU + 100) % 1;
+      const sy = CY + (g.ev - 0.5) * earthH * scale;
 
       for (const uOff of [0, -1, 1]) {
-        const sx = cx + (rawU + uOff - 0.5) * earthPx;
-        if ((sx - cx) ** 2 + (sy - cy) ** 2 > clipR2) continue;
+        const sx = CX + (rawU + uOff - 0.5) * earthPx;
+        const dx = sx - CX, dy = sy - CY;
+        if (dx*dx + dy*dy > clipR2) continue;
 
-        const mul  = g.isLand ? alphaLand : alphaSea;
+        const mul = g.isLand ? alphaLand : alphaSea;
         const base = g.isLand
-          ? (0.58 + g.variation * 0.32) * mul
-          : (0.18 + g.variation * 0.18) * mul;
-        const alpha = Math.min(1, (base + g.flash * 0.35) * this.globeAlpha);
+          ? (0.58 + g.variation*0.32) * mul
+          : (0.18 + g.variation*0.18) * mul;
+        const alpha = Math.min(1, (base + g.flash*0.35));
         if (alpha <= 0.001) continue;
 
         const color = g.isLand ? colorLand : colorSea;
         ctx.globalAlpha = alpha;
         ctx.strokeStyle = color;
-        ctx.beginPath(); ctx.arc(sx, sy, circleR, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(sx, sy, circleR, 0, Math.PI*2); ctx.stroke();
         ctx.fillStyle = color;
         ctx.fillText(g.char, sx, sy);
       }
     }
     ctx.globalAlpha = 1;
   }
-
-  stop() { cancelAnimationFrame(this.animId); }
 }
 
-// ── Init ─────────────────────────────────────────────────────────────────────
-const PREVIEW_SIZE = 500;
-let globeInst = null;
+// ═══════════════════════════════════════════════════════════════════════
+// Globe 2 — orthographic sphere, orange land, grey sea
+// ═══════════════════════════════════════════════════════════════════════
+const VIEW_TILT = (18 * Math.PI) / 180;
 
-function initGlobe() {
-  const canvas = document.getElementById('globe-canvas');
-  if (globeInst) globeInst.stop();
-  document.getElementById('btn-record').disabled = true;
-  document.getElementById('status').textContent  = '지구본 로딩 중...';
-  globeInst = new Globe(canvas, PREVIEW_SIZE);
-}
-initGlobe();
+class Globe2 {
+  constructor() {
+    this.scrollU  = 0;
+    this.lastTime = 0;
+    this.glyphs   = [];
+    this.radius   = CX * 0.88;
+    this._build();
+  }
+  _build() {
+    if (!earthReady) return;
+    this.glyphs = [];
+    const rows = 65, cols = 130;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const eu = c / cols, ev = r / rows;
+        const px = Math.min(Math.floor(eu * earthW), earthW - 1);
+        const py = Math.min(Math.floor(ev * earthH), earthH - 1);
+        const isLand = (earthData[(py * earthW + px) * 4] ?? 0) < 128;
+        this.glyphs.push({
+          eu, ev, isLand,
+          char: CHARS[Math.floor(Math.random() * CHARS.length)],
+          variation: Math.random(), timer: Math.random()*3,
+          interval: 0.7 + Math.random()*2.8, flash: 0,
+        });
+      }
+    }
+  }
+  draw(dt, speedMul, colorLand, colorSea, alphaLand, alphaSea, bgColor) {
+    this.scrollU = (this.scrollU + (1/12) * speedMul * dt) % 1;
+    const radius = this.radius;
+    const ROWS   = 65;
+    const scale  = (radius * 2) / earthH;
+    const circleR = Math.max(4, (earthH * scale / ROWS) * 0.49);
+    const fontSize = Math.max(9, Math.round(circleR * 1.1));
+    const cosT = Math.cos(VIEW_TILT), sinT = Math.sin(VIEW_TILT);
 
-// ── 실시간 UI 업데이트 ───────────────────────────────────────────────────────
-function calcLoopSec() {
-  const fps      = parseInt(document.getElementById('fps').value);
-  const speedMul = parseFloat(document.getElementById('speed').value);
-  // 1 full rotation = 1 / (SCROLL_SPEED * speedMul) seconds
-  const sec = (1 / (SCROLL_SPEED * speedMul)).toFixed(1);
-  document.getElementById('loop-sec').textContent = sec;
-  return parseFloat(sec);
+    ctx.clearRect(0, 0, SIZE, SIZE);
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, SIZE, SIZE);
+
+    if (!earthReady || !this.glyphs.length) return;
+
+    ctx.font = `600 ${fontSize}px 'Inter', sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 1.2;
+
+    for (const g of this.glyphs) {
+      g.timer += dt;
+      if (g.timer >= g.interval) {
+        g.timer = 0; g.interval = 0.7 + Math.random()*2.8;
+        g.char = CHARS[Math.floor(Math.random()*CHARS.length)]; g.flash = 1;
+      }
+      if (g.flash > 0) g.flash = Math.max(0, g.flash - dt*3.2);
+
+      const lat = (0.5 - g.ev) * Math.PI;
+      const cosLat = Math.cos(lat);
+      if (g.variation > cosLat * cosLat * 1.15) continue;
+
+      const rawU  = (g.eu - CHINA_EU + 0.5 - this.scrollU + 100) % 1;
+      const delta = (rawU - 0.5) * Math.PI * 2;
+      const x3 = cosLat * Math.sin(delta);
+      const y3 = Math.sin(lat);
+      const z3 = cosLat * Math.cos(delta);
+
+      const y2 = y3 * cosT - z3 * sinT;
+      const z2 = y3 * sinT + z3 * cosT;
+      if (z2 <= 0) continue;
+
+      const varB = (g.variation * 13.71) % 1;
+      if (varB > Math.abs(Math.cos(delta)) * 1.2) continue;
+
+      const fore = z2;
+      const sx = CX + radius * x3;
+      const sy = CY - radius * y2;
+
+      const mulL = alphaLand, mulS = alphaSea;
+      const base = g.isLand
+        ? (0.72 + g.variation*0.28) * mulL
+        : (0.06 + g.variation*0.12) * mulS;
+      const edgeFade = 0.35 + 0.65 * fore;
+      const alpha = Math.min(1, (base + g.flash*0.35) * edgeFade);
+      if (alpha <= 0.003) continue;
+
+      const pop = easeOutBack(Math.min(1, 1 - g.flash));
+      const rr  = circleR * (0.55 + 0.45*fore) * Math.max(0.01, pop);
+      const glyphScale = rr / circleR;
+      const color = g.isLand ? colorLand : colorSea;
+
+      ctx.globalAlpha = alpha;
+      ctx.beginPath(); ctx.arc(sx, sy, rr, 0, Math.PI*2);
+      ctx.fillStyle = '#fff'; ctx.fill();
+      ctx.strokeStyle = color; ctx.stroke();
+      ctx.fillStyle = color;
+      if (glyphScale < 0.98) {
+        ctx.save(); ctx.translate(sx, sy); ctx.scale(glyphScale, glyphScale);
+        ctx.fillText(g.char, 0, 0); ctx.restore();
+      } else {
+        ctx.fillText(g.char, sx, sy);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
 }
+
+// ═══════════════════════════════════════════════════════════════════════
+// Globe 3 — hex coin grid
+// ═══════════════════════════════════════════════════════════════════════
+class Globe3 {
+  constructor() {
+    this.scrollU  = 0;
+    this.lastTime = 0;
+    this.cells    = [];
+    this.radius   = CX * 0.88;
+    this._build();
+  }
+  _build() {
+    const r = this.radius;
+    const COLS = 42;
+    const s    = (r * 2) / COLS;
+    this.cellSize = s;
+    const rowH = s * 0.885;
+    this.cells = [];
+    const rows = Math.ceil((r * 2) / rowH);
+    for (let row = 0; row <= rows; row++) {
+      const y = -r + row * rowH;
+      const offset = row % 2 === 0 ? 0 : s/2;
+      for (let c = -1; c <= COLS; c++) {
+        const x = -r + c * s + offset + s/2;
+        if (Math.hypot(x, y) > r - s*0.35) continue;
+        this.cells.push({
+          x, y, isLand: false, anim: 1,
+          seedA: Math.random(), seedB: Math.random(), seedC: Math.random(),
+          timer: Math.random()*3, interval: 1.2 + Math.random()*3.5,
+        });
+      }
+    }
+  }
+  _sampleLand(u, v) {
+    if (!earthReady) return false;
+    const px = Math.min(Math.floor(((u%1+1)%1) * earthW), earthW-1);
+    const py = Math.min(Math.floor(Math.max(0, Math.min(0.999, v)) * earthH), earthH-1);
+    return (earthData[(py * earthW + px) * 4] ?? 255) < 128;
+  }
+  draw(dt, speedMul, bgColor, coinColor) {
+    this.scrollU = (this.scrollU + (1/20) * speedMul * dt) % 1;
+    const s = this.cellSize;
+    const r = this.radius;
+    const mapW = r * 4, mapH = r * 2;
+    const coinFont = Math.round(s * 0.52);
+
+    ctx.clearRect(0, 0, SIZE, SIZE);
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, SIZE, SIZE);
+
+    if (!earthReady) return;
+
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `700 ${coinFont}px 'Inter', sans-serif`;
+
+    for (const cell of this.cells) {
+      const u = (cell.x / mapW) + 0.5 + this.scrollU;
+      const v = (cell.y / mapH) + 0.5;
+      const land = this._sampleLand(u, v);
+      if (land !== cell.isLand) {
+        cell.isLand = land; cell.anim = 0;
+        cell.seedA = Math.random(); cell.seedB = Math.random(); cell.seedC = Math.random();
+      }
+      if (!cell.isLand) {
+        cell.timer += dt;
+        if (cell.timer >= cell.interval) {
+          cell.timer = 0; cell.interval = 1.2 + Math.random()*3.5;
+          cell.seedB = Math.random(); cell.seedC = Math.random(); cell.anim = 0;
+        }
+      }
+      cell.anim = Math.min(1, cell.anim + dt*3.2);
+      const px = CX + cell.x, py = CY + cell.y;
+      const pop = easeOutBack(cell.anim);
+      ctx.globalAlpha = 1;
+
+      if (cell.isLand) {
+        const coinR = s * 0.46 * (0.9 + cell.seedA*0.18) * pop;
+        ctx.fillStyle = coinColor;
+        ctx.beginPath(); ctx.arc(px, py, Math.max(0.5, coinR), 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = bgColor;
+        if (cell.seedB < 0.12) {
+          ctx.beginPath(); ctx.arc(px, py, coinR*0.18, 0, Math.PI*2); ctx.fill();
+        } else {
+          ctx.save(); ctx.translate(px, py); ctx.scale(pop, pop);
+          ctx.fillText('£', 0, s*0.02); ctx.restore();
+        }
+      } else {
+        if (cell.seedB < 0.42) {
+          const ringR = s * (0.16 + cell.seedC*0.26) * pop;
+          ctx.strokeStyle = coinColor;
+          ctx.lineWidth = Math.max(1.2, s*0.075);
+          ctx.beginPath(); ctx.arc(px, py, Math.max(0.5, ringR), 0, Math.PI*2); ctx.stroke();
+          if (cell.seedC > 0.72) {
+            ctx.fillStyle = coinColor;
+            ctx.beginPath(); ctx.arc(px, py, ringR*0.34, 0, Math.PI*2); ctx.fill();
+          }
+        } else if (cell.seedB < 0.58) {
+          const dotR = s * 0.09 * pop;
+          ctx.fillStyle = coinColor;
+          ctx.beginPath(); ctx.arc(px, py, Math.max(0.5, dotR), 0, Math.PI*2); ctx.fill();
+        }
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Main loop
+// ═══════════════════════════════════════════════════════════════════════
+let globe1 = null, globe2 = null, globe3 = null;
+let activeGlobe = 1;
+let animId = null;
+let lastTime = 0;
+
+const DESCS = {
+  1: '화폐 글리프 · 평면 투영 · 기본 속도 25초/회전',
+  2: '화폐 글리프 · 구면 투영(18° 틸트) · 12초/회전',
+  3: '코인 그리드 · 헥스 배치 · 20초/회전',
+};
+
+function getControls() {
+  return {
+    colorLand: document.getElementById('color-land').value,
+    colorSea:  document.getElementById('color-sea').value,
+    alphaLand: parseInt(document.getElementById('alpha-land').value) / 100,
+    alphaSea:  parseInt(document.getElementById('alpha-sea').value)  / 100,
+    bgColor:   document.getElementById('bg-sel').value,
+    coinBg:    document.getElementById('coin-bg').value,
+    coinFg:    document.getElementById('coin-fg').value,
+    speed:     parseFloat(document.getElementById('speed').value),
+  };
+}
+
+function loop(now) {
+  const dt = Math.min((now - lastTime) / 1000, 0.05);
+  lastTime = now;
+
+  if (!earthReady) { animId = requestAnimationFrame(loop); return; }
+
+  const c = getControls();
+
+  if (activeGlobe === 1 && globe1) {
+    globe1.draw(dt, c.speed, c.colorLand, c.colorSea, c.alphaLand, c.alphaSea, c.bgColor);
+  } else if (activeGlobe === 2 && globe2) {
+    globe2.draw(dt, c.speed, c.colorLand, c.colorSea, c.alphaLand, c.alphaSea, c.bgColor);
+  } else if (activeGlobe === 3 && globe3) {
+    globe3.draw(dt, c.speed, c.coinBg, c.coinFg);
+  }
+
+  // Sync globe-wrap background
+  const bg = activeGlobe === 3 ? c.coinBg : c.bgColor;
+  document.getElementById('globe-wrap').style.background = bg;
+
+  animId = requestAnimationFrame(loop);
+}
+
+function initGlobes() {
+  globe1 = new Globe1();
+  globe2 = new Globe2();
+  globe3 = new Globe3();
+  lastTime = performance.now();
+  animId = requestAnimationFrame(loop);
+}
+
+loadEarth(initGlobes);
+
+// ═══════════════════════════════════════════════════════════════════════
+// UI wiring
+// ═══════════════════════════════════════════════════════════════════════
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeGlobe = parseInt(btn.dataset.g);
+    document.getElementById('ctrl-g1g2').style.display = activeGlobe === 3 ? 'none' : 'block';
+    document.getElementById('ctrl-g3').style.display   = activeGlobe === 3 ? 'block' : 'none';
+    document.getElementById('globe-desc').textContent  = DESCS[activeGlobe] || '';
+  });
+});
 
 document.getElementById('alpha-land').addEventListener('input', e => {
-  document.getElementById('alpha-land-val').textContent = e.target.value + '%';
+  document.getElementById('al-val').textContent = e.target.value + '%';
 });
 document.getElementById('alpha-sea').addEventListener('input', e => {
-  document.getElementById('alpha-sea-val').textContent = e.target.value + '%';
+  document.getElementById('as-val').textContent = e.target.value + '%';
 });
 document.getElementById('speed').addEventListener('input', e => {
-  document.getElementById('speed-val').textContent = e.target.value + '×';
-  calcLoopSec();
-});
-document.getElementById('fps').addEventListener('change', calcLoopSec);
-document.getElementById('seamless').addEventListener('change', e => {
-  document.getElementById('dur-row').style.display = e.target.checked ? 'none' : 'flex';
-});
-// color dot 동기화
-document.getElementById('color-land').addEventListener('input', e => {
-  document.querySelector('.color-dot').style.background = e.target.value;
-});
-document.getElementById('color-sea').addEventListener('input', e => {
-  document.querySelectorAll('.color-dot')[1].style.background = e.target.value;
-});
-
-calcLoopSec(); // 초기 계산
-
-// ── GIF 녹화 ────────────────────────────────────────────────────────────────
-document.getElementById('btn-record').addEventListener('click', async () => {
-  const btn       = document.getElementById('btn-record');
-  const status    = document.getElementById('status');
-  const prog      = document.getElementById('prog');
-  const fps       = parseInt(document.getElementById('fps').value);
-  const outSize   = parseInt(document.getElementById('out-size').value);
-  const speedMul  = parseFloat(document.getElementById('speed').value);
-  const seamless  = document.getElementById('seamless').checked;
-  const bgColor   = document.getElementById('bg').value;
-  const frameMs   = 1000 / fps;
-
-  // ── 총 프레임 수 계산 ────────────────────────────────────────────────────
-  let totalFrames;
-  if (seamless) {
-    // 1회전에 필요한 정확한 프레임 수 (소수점 → 반올림)
-    // 1 rotation = 1 / (SCROLL_SPEED * speedMul) sec = fps / (SCROLL_SPEED * speedMul) frames
-    totalFrames = Math.round(fps / (SCROLL_SPEED * speedMul));
-  } else {
-    const durSec = parseInt(document.getElementById('duration').value);
-    totalFrames  = fps * durSec;
-  }
-
-  const durSec = (totalFrames / fps).toFixed(1);
-  btn.disabled = true;
-  prog.style.display = 'block';
-  prog.value = 0;
-
-  // ── 오프스크린 Globe ──────────────────────────────────────────────────────
-  const offCanvas = document.createElement('canvas');
-  offCanvas.width  = outSize;
-  offCanvas.height = outSize;
-
-  const offGlobe = new Globe(offCanvas, outSize);
-  offGlobe.scrollU    = globeInst.scrollU; // 현재 위치에서 시작
-  offGlobe.globeAlpha = 1;
-  offGlobe.stop();
-
-  const startScrollU = offGlobe.scrollU; // seamless 검증용
-
-  // earth 데이터 로드 대기
-  await new Promise(resolve => {
-    const check = () => offGlobe.earthData ? resolve() : setTimeout(check, 80);
-    check();
-  });
-
-  // ── scrollU 증분 (프레임당) ───────────────────────────────────────────────
-  const deltaU = SCROLL_SPEED * speedMul * (frameMs / 1000);
-
-  const gif = new GIF({
-    workers:      4,
-    quality:      6,
-    width:        outSize,
-    height:       outSize,
-    workerScript: 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js',
-  });
-
-  status.textContent = `녹화 중 (${totalFrames}프레임 / ${durSec}초)...`;
-
-  for (let i = 0; i < totalFrames; i++) {
-    // 정확한 scrollU로 그리기 (누적 오차 없음)
-    const su = seamless
-      ? (startScrollU + deltaU * i) % 1
-      : (offGlobe.scrollU);
-
-    offGlobe._draw(frameMs / 1000, speedMul, seamless ? su : null);
-    if (!seamless) offGlobe.scrollU = (offGlobe.scrollU + deltaU) % 1;
-
-    // 원형 마스크 적용
-    const masked = document.createElement('canvas');
-    masked.width = masked.height = outSize;
-    const mctx = masked.getContext('2d');
-    mctx.fillStyle = bgColor;
-    mctx.fillRect(0, 0, outSize, outSize);
-    mctx.save();
-    mctx.beginPath();
-    mctx.arc(outSize / 2, outSize / 2, outSize / 2, 0, Math.PI * 2);
-    mctx.clip();
-    mctx.drawImage(offCanvas, 0, 0);
-    mctx.restore();
-
-    gif.addFrame(masked, { delay: frameMs, copy: true });
-
-    prog.value = Math.round((i / totalFrames) * 55);
-    status.textContent = `녹화 중... ${i + 1} / ${totalFrames} 프레임`;
-    if (i % 5 === 0) await new Promise(r => setTimeout(r, 0)); // UI yield
-  }
-
-  offGlobe.stop();
-  status.textContent = 'GIF 인코딩 중...';
-
-  gif.on('progress', p => {
-    prog.value = 55 + Math.round(p * 45);
-    status.textContent = `인코딩 중... ${Math.round(p * 100)}%`;
-  });
-
-  gif.on('finished', blob => {
-    const url      = URL.createObjectURL(blob);
-    const filename = `globe_${outSize}px_${fps}fps_${speedMul}x${seamless ? '_loop' : ''}.gif`;
-
-    const preview = document.getElementById('preview');
-    preview.src          = url;
-    preview.style.display = 'block';
-
-    const a = document.createElement('a');
-    a.href = url; a.download = filename; a.click();
-
-    const dl = document.getElementById('download-link');
-    dl.href = url; dl.download = filename; dl.style.display = 'block';
-
-    btn.disabled       = false;
-    prog.style.display = 'none';
-    status.textContent =
-      `✅ 완료! ${seamless ? '🔁 Seamless loop ' : ''}(${(blob.size/1024/1024).toFixed(2)} MB)`;
-  });
-
-  gif.render();
+  document.getElementById('sp-val').textContent = e.target.value + '×';
 });
 </script>
 </body>
