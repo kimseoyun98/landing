@@ -157,7 +157,7 @@
     </div>
     <div class="row">
       <label>글자 채움</label>
-      <input type="range" id="g1-fill" min="20" max="250" value="100" />
+      <input type="range" id="g1-fill" min="0" max="250" value="100" />
       <span class="val" id="g1fill-val">100%</span>
     </div>
     <div class="row">
@@ -218,7 +218,7 @@
     </div>
     <div class="row">
       <label>글자 채움</label>
-      <input type="range" id="g2-fill" min="20" max="250" value="100" />
+      <input type="range" id="g2-fill" min="0" max="250" value="100" />
       <span class="val" id="g2fill-val">100%</span>
     </div>
     <div class="row">
@@ -390,7 +390,7 @@ class Globe1 {
     const rows=this._rows||65, cols=this._cols||130;
     const cr=Math.hypot(CX,CY), scale=(cr*2)/earthH, earthPx=earthW*scale;
     const circleR=Math.max(4,(earthH*scale/rows)*0.44);
-    const fs=Math.max(8,Math.round(circleR*0.7*fill));
+    const fs=Math.round(circleR*0.7*fill);
     ctx.fillStyle=bg; ctx.fillRect(0,0,SIZE,SIZE);
     if (!this.glyphs.length) return;
     ctx.font=`${fw} ${fs}px sans-serif`; ctx.textAlign='center'; ctx.textBaseline='alphabetic'; ctx.lineWidth=sw;
@@ -413,16 +413,16 @@ class Globe1 {
         ctx.globalAlpha=alpha;
         if (style==='filled') {
           ctx.beginPath(); ctx.arc(sx,sy,circleR,0,Math.PI*2); ctx.fillStyle=color; ctx.fill();
-          ctx.fillStyle=bg; ctx.fillText(g.char,sx,sy+yFix);
+          if(fs>0){ctx.fillStyle=bg; ctx.fillText(g.char,sx,sy+yFix);}
         } else if (style==='tinted') {
           ctx.globalAlpha=alpha*0.3;
           ctx.beginPath(); ctx.arc(sx,sy,circleR,0,Math.PI*2); ctx.fillStyle=color; ctx.fill();
           ctx.globalAlpha=alpha;
           if(sw>0){ctx.strokeStyle=color; ctx.stroke();}
-          ctx.fillStyle=color; ctx.fillText(g.char,sx,sy+yFix);
+          if(fs>0){ctx.fillStyle=color; ctx.fillText(g.char,sx,sy+yFix);}
         } else {
           if(sw>0){ctx.strokeStyle=color; ctx.beginPath(); ctx.arc(sx,sy,circleR,0,Math.PI*2); ctx.stroke();}
-          ctx.fillStyle=color; ctx.fillText(g.char,sx,sy+yFix);
+          if(fs>0){ctx.fillStyle=color; ctx.fillText(g.char,sx,sy+yFix);}
         }
         ctx.globalAlpha=1;
       }
@@ -466,7 +466,7 @@ class Globe2 {
     this.scrollU=(this.scrollU+(1/24)*sp*dt)%1;
     const R=CX*0.88, scale=(R*2)/earthH;
     const rows=this._rows||65;
-    const circleR=Math.max(4,(earthH*scale/rows)*0.49), fs=Math.max(9,Math.round(circleR*1.1*fill));
+    const circleR=Math.max(4,(earthH*scale/rows)*0.49), fs=Math.round(circleR*1.1*fill);
     ctx.fillStyle=bg; ctx.fillRect(0,0,SIZE,SIZE);
     ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(CX,CY,R,0,Math.PI*2); ctx.fill();
     if (!this.glyphs.length) return;
@@ -487,32 +487,20 @@ class Globe2 {
       if (alpha<=0.003) continue;
       const rr=circleR*(0.55+0.45*z2);
       const color=g.isLand?cL:cS;
-      // ── 구면 틸트에 맞춰 글자 회전 ──────────────────────────
-      // (lat+δ)의 스크린 좌표를 구해 "북쪽" 방향 벡터 계산
-      const dLat=0.12;
-      const lat2=lat+dLat, cL2=Math.cos(lat2);
-      const x3n=cL2*Math.sin(delta), y3n=Math.sin(lat2), z3n=cL2*Math.cos(delta);
-      const y2n=y3n*cosT2-z3n*sinT2;
-      const sxN=CX+R*x3n, syN=CY-R*y2n;
-      const ang=Math.atan2(sxN-sx, sy-syN); // 화면상 "위" 방향 각도
-
       ctx.globalAlpha=alpha;
       if (style==='filled') {
         ctx.beginPath(); ctx.arc(sx,sy,rr,0,Math.PI*2); ctx.fillStyle=color; ctx.fill();
-        ctx.fillStyle=bg;
-        ctx.save(); ctx.translate(sx,sy+yFixB); ctx.rotate(ang); ctx.fillText(g.char,0,0); ctx.restore();
+        if(fs>0){ctx.fillStyle=bg; ctx.fillText(g.char,sx,sy+yFixB);}
       } else if (style==='tinted') {
         ctx.globalAlpha=alpha*0.3;
         ctx.beginPath(); ctx.arc(sx,sy,rr,0,Math.PI*2); ctx.fillStyle=color; ctx.fill();
         ctx.globalAlpha=alpha;
         if(sw>0){ctx.strokeStyle=color; ctx.stroke();}
-        ctx.fillStyle=color;
-        ctx.save(); ctx.translate(sx,sy+yFixB); ctx.rotate(ang); ctx.fillText(g.char,0,0); ctx.restore();
+        if(fs>0){ctx.fillStyle=color; ctx.fillText(g.char,sx,sy+yFixB);}
       } else {
         ctx.beginPath(); ctx.arc(sx,sy,rr,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
         if(sw>0){ctx.strokeStyle=color; ctx.stroke();}
-        ctx.fillStyle=color;
-        ctx.save(); ctx.translate(sx,sy+yFixB); ctx.rotate(ang); ctx.fillText(g.char,0,0); ctx.restore();
+        if(fs>0){ctx.fillStyle=color; ctx.fillText(g.char,sx,sy+yFixB);}
       }
       ctx.globalAlpha=1;
     }
