@@ -9,7 +9,7 @@
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: 'Inter', sans-serif;
-      background: #f4f4f4; color: #1a1a1a;
+      background: #ffffff; color: #1a1a1a;
       min-height: 100vh; display: flex; flex-direction: column;
       align-items: center; padding: 32px 0 60px;
     }
@@ -191,11 +191,11 @@
     </div>
     <div class="row">
       <label>점 색</label>
-      <input type="color" id="neo-dot" value="#1d4ed8" />
+      <input type="color" id="neo-dot" value="#888888" />
     </div>
     <div class="row">
       <label>아크 색</label>
-      <input type="color" id="neo-arc" value="#3b82f6" />
+      <input type="color" id="neo-arc" value="#FF7300" />
     </div>
     <div class="row">
       <label>배경</label>
@@ -370,7 +370,7 @@ class Globe2 {
 
 // ── Globe 3: hex coin grid ──────────────────────────────────────────────
 class Globe3 {
-  constructor() { this.scrollU=0;this.cells=[];this.radius=CX*0.88;this._build(); }
+  constructor() { this.scrollU=0;this.cells=[];this.radius=CX;this._build(); }
   _build() {
     const r=this.radius,COLS=42,s=(r*2)/COLS; this.cellSize=s;
     const rowH=s*0.885, rows=Math.ceil((r*2)/rowH); this.cells=[];
