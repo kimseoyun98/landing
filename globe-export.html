@@ -793,15 +793,15 @@ function loop(now) {
   // 풀스크린 오버레이에 복사
   if (fsActive) {
     const W=window.innerWidth, H=window.innerHeight;
-    fsCtx.fillStyle='#ffffff'; fsCtx.fillRect(0,0,W,H);
-    const sz=Math.min(W,H);
-    const ox=(W-sz)/2, oy=(H-sz)/2;
+    const c2=ctrl();
+    const bgCol=active===1?c2.bg:active===3?c2.cBg:'#ffffff';
+    fsCtx.fillStyle=bgCol; fsCtx.fillRect(0,0,W,H);
+    const sz=Math.min(W,H)*fsZoom;
+    const cx=W/2+fsPan.x, cy=H/2+fsPan.y;
+    const ox=cx-sz/2, oy=cy-sz/2;
     if (active===1) {
-      // Globe 1·3: 원형 클립 적용
       fsCtx.save();
-      fsCtx.beginPath();
-      fsCtx.arc(ox+sz/2, oy+sz/2, sz/2, 0, Math.PI*2);
-      fsCtx.clip();
+      fsCtx.beginPath(); fsCtx.arc(cx,cy,sz/2,0,Math.PI*2); fsCtx.clip();
       fsCtx.drawImage(canvas, ox, oy, sz, sz);
       fsCtx.restore();
     } else {
@@ -879,12 +879,15 @@ sizeRebuild('g4-size','g4s-val',sc=>{
   });
 });
 
-// ── 전체보기 ───────────────────────────────────────────────
+// ── 전체보기 pan/zoom 상태 ─────────────────────────────────────────────────
+let fsPan={x:0,y:0}, fsZoom=1, fsDrag=null, fsTouch=null;
+
 function openFs() {
   const W=window.innerWidth, H=window.innerHeight;
   fsCanvas.width=Math.round(W*DPR); fsCanvas.height=Math.round(H*DPR);
   fsCanvas.style.width=W+'px'; fsCanvas.style.height=H+'px';
   fsCtx.setTransform(DPR,0,0,DPR,0,0);
+  fsPan={x:0,y:0}; fsZoom=1; fsDrag=null; fsTouch=null;
   document.getElementById('fs-overlay').classList.add('active');
   fsActive=true;
 }
@@ -907,6 +910,75 @@ window.addEventListener('resize', ()=>{
     fsCtx.setTransform(DPR,0,0,DPR,0,0);
   }
 });
+
+// ── 전체보기 드래그·줌 이벤트 ────────────────────────────────────────────────
+const fsOvEl=document.getElementById('fs-overlay');
+fsCanvas.style.cursor='grab';
+
+// 마우스 드래그
+fsOvEl.addEventListener('mousedown',e=>{
+  if(!fsActive||e.button!==0) return;
+  fsDrag={sx:e.clientX,sy:e.clientY,px:fsPan.x,py:fsPan.y};
+  fsCanvas.style.cursor='grabbing';
+});
+document.addEventListener('mousemove',e=>{
+  if(!fsDrag) return;
+  fsPan.x=fsDrag.px+(e.clientX-fsDrag.sx);
+  fsPan.y=fsDrag.py+(e.clientY-fsDrag.sy);
+});
+document.addEventListener('mouseup',()=>{
+  fsDrag=null;
+  if(fsActive) fsCanvas.style.cursor='grab';
+});
+
+// 스크롤 줌 (마우스 커서 위치 기준)
+fsOvEl.addEventListener('wheel',e=>{
+  if(!fsActive) return;
+  e.preventDefault();
+  const W=window.innerWidth, H=window.innerHeight;
+  const mx=e.clientX-W/2, my=e.clientY-H/2;
+  const factor=e.deltaY>0?0.9:1.1;
+  const newZoom=Math.max(0.1,Math.min(20,fsZoom*factor));
+  // 커서 위치 기준으로 pan 보정
+  const ratio=newZoom/fsZoom;
+  fsPan.x=mx+(fsPan.x-mx)*ratio;
+  fsPan.y=my+(fsPan.y-my)*ratio;
+  fsZoom=newZoom;
+},{passive:false});
+
+// 더블클릭 → pan/zoom 리셋
+fsCanvas.addEventListener('dblclick',()=>{ fsPan={x:0,y:0}; fsZoom=1; });
+
+// 터치 드래그 & 핀치 줌
+fsOvEl.addEventListener('touchstart',e=>{
+  if(!fsActive) return;
+  if(e.touches.length===1){
+    fsDrag={sx:e.touches[0].clientX,sy:e.touches[0].clientY,px:fsPan.x,py:fsPan.y};
+    fsTouch=null;
+  } else if(e.touches.length===2){
+    fsDrag=null;
+    const d=Math.hypot(e.touches[1].clientX-e.touches[0].clientX,e.touches[1].clientY-e.touches[0].clientY);
+    fsTouch={d0:d,z0:fsZoom,px0:fsPan.x,py0:fsPan.y};
+  }
+},{passive:true});
+fsOvEl.addEventListener('touchmove',e=>{
+  if(!fsActive) return;
+  e.preventDefault();
+  if(e.touches.length===1&&fsDrag){
+    fsPan.x=fsDrag.px+(e.touches[0].clientX-fsDrag.sx);
+    fsPan.y=fsDrag.py+(e.touches[0].clientY-fsDrag.sy);
+  } else if(e.touches.length===2&&fsTouch){
+    const d=Math.hypot(e.touches[1].clientX-e.touches[0].clientX,e.touches[1].clientY-e.touches[0].clientY);
+    fsZoom=Math.max(0.1,Math.min(20,fsTouch.z0*d/fsTouch.d0));
+  }
+},{passive:false});
+fsOvEl.addEventListener('touchend',e=>{
+  if(e.touches.length===0){fsDrag=null;fsTouch=null;}
+  else if(e.touches.length===1){
+    fsDrag={sx:e.touches[0].clientX,sy:e.touches[0].clientY,px:fsPan.x,py:fsPan.y};
+    fsTouch=null;
+  }
+},{passive:true});
 </script>
 </body>
 </html>
