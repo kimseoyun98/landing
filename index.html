@@ -187,6 +187,11 @@
       <label>코인색</label>
       <input type="color" id="coin-fg" value="#FFFFFF" />
     </div>
+    <div class="row">
+      <label>코인 크기</label>
+      <input type="range" id="coin-size" min="30" max="180" value="100" />
+      <span class="val" id="cs-val">100%</span>
+    </div>
   </div>
 
   <div id="ctrl-g4" style="display:none">
@@ -212,8 +217,8 @@
   <div class="panel-title">속도</div>
   <div class="row">
     <label>회전 속도</label>
-    <input type="range" id="speed" min="1" max="10" value="5" />
-    <span class="val" id="sp-val">5×</span>
+    <input type="range" id="speed" min="1" max="10" value="2" />
+    <span class="val" id="sp-val">2×</span>
   </div>
 </div>
 
@@ -288,7 +293,7 @@ class Globe1 {
     }
   }
   draw(dt,sp,cL,cS,aL,aS,bg) {
-    this.scrollU=(this.scrollU+(1/25)*sp*dt)%1;
+    this.scrollU=(this.scrollU+(1/50)*sp*dt)%1;
     const cr=Math.hypot(CX,CY), scale=(cr*2)/earthH, earthPx=earthW*scale;
     const circleR=Math.max(4,(earthH*scale/120)*0.44);
     const fs=Math.max(8,Math.round(circleR*0.7));
@@ -349,7 +354,7 @@ class Globe2 {
     this.arcs.push({from:NEO_CITIES[a],to:NEO_CITIES[b],t:0,dur:1.6+Math.random()*1.2,alpha:0});
   }
   draw(dt,sp,cL,cS,aL,aS,bg,ac) {
-    this.scrollU=(this.scrollU+(1/12)*sp*dt)%1;
+    this.scrollU=(this.scrollU+(1/24)*sp*dt)%1;
     const R=CX*0.88, scale=(R*2)/earthH;
     const circleR=Math.max(4,(earthH*scale/65)*0.49), fs=Math.max(9,Math.round(circleR*1.1));
     // 배경
@@ -439,8 +444,8 @@ class Globe3 {
     const py=Math.min(Math.floor(Math.max(0,Math.min(0.999,v))*earthH),earthH-1);
     return (earthData[(py*earthW+px)*4]??255)<128;
   }
-  draw(dt,sp,bg,fg) {
-    this.scrollU=(this.scrollU+(1/20)*sp*dt)%1;
+  draw(dt,sp,bg,fg,cs) {
+    this.scrollU=(this.scrollU+(1/40)*sp*dt)%1;
     const s=this.cellSize,r=this.radius,mapW=r*4,mapH=r*2;
     ctx.fillStyle=bg; ctx.fillRect(0,0,SIZE,SIZE);
     if (!earthReady) return;
@@ -464,19 +469,19 @@ class Globe3 {
       const px=CX+cell.x,py=CY+cell.y,pop=easeOutBack(cell.anim);
       ctx.globalAlpha=1;
       if (cell.isLand) {
-        const coinR=s*0.46*(0.9+cell.seedA*0.18)*pop;
+        const coinR=s*0.46*(0.9+cell.seedA*0.18)*pop*(cs||1);
         ctx.fillStyle=fg; ctx.beginPath(); ctx.arc(px,py,Math.max(0.5,coinR),0,Math.PI*2); ctx.fill();
         ctx.fillStyle=bg;
         if (cell.seedB<0.12) { ctx.beginPath(); ctx.arc(px,py,coinR*0.18,0,Math.PI*2); ctx.fill(); }
         else { ctx.save();ctx.translate(px,py);ctx.scale(pop,pop);ctx.fillText('£',0,s*0.02);ctx.restore(); }
       } else {
         if (cell.seedB<0.42) {
-          const ringR=s*(0.16+cell.seedC*0.26)*pop;
+          const ringR=s*(0.16+cell.seedC*0.26)*pop*(cs||1);
           ctx.strokeStyle=fg; ctx.lineWidth=Math.max(1.2,s*0.075);
           ctx.beginPath(); ctx.arc(px,py,Math.max(0.5,ringR),0,Math.PI*2); ctx.stroke();
           if (cell.seedC>0.72) { ctx.fillStyle=fg;ctx.beginPath();ctx.arc(px,py,ringR*0.34,0,Math.PI*2);ctx.fill(); }
         } else if (cell.seedB<0.58) {
-          ctx.fillStyle=fg; ctx.beginPath(); ctx.arc(px,py,Math.max(0.5,s*0.09*pop),0,Math.PI*2); ctx.fill();
+          ctx.fillStyle=fg; ctx.beginPath(); ctx.arc(px,py,Math.max(0.5,s*0.09*pop*(cs||1)),0,Math.PI*2); ctx.fill();
         }
       }
     }
@@ -531,7 +536,7 @@ class Globe4 {
     ctx.shadowBlur=0;ctx.globalAlpha=1;
   }
   draw(dt,sp,dc,ac,bg) {
-    this.scrollU=(this.scrollU+0.018*sp*dt)%1;
+    this.scrollU=(this.scrollU+0.009*sp*dt)%1;
     const R=SIZE*0.36;
     // 바깥 배경 때운 후 구면 내부를 흰색으로 체우기
     ctx.fillStyle=bg||'#ffffff'; ctx.fillRect(0,0,SIZE,SIZE);
@@ -598,6 +603,7 @@ function ctrl() {
     g2ac:document.getElementById('g2-arc').value,
     cBg:document.getElementById('coin-bg').value,
     cFg:document.getElementById('coin-fg').value,
+    cs:parseInt(document.getElementById('coin-size').value)/100,
     nd:document.getElementById('neo-dot').value,
     na:document.getElementById('neo-arc').value,
     nb:document.getElementById('neo-bg').value,
@@ -611,7 +617,7 @@ function loop(now) {
   const c=ctrl();
   if      (active===1&&g1) g1.draw(dt,c.sp,c.cL,c.cS,c.aL,c.aS,c.bg);
   else if (active===2&&g2) g2.draw(dt,c.sp,c.g2cL,c.g2cS,c.g2aL,c.g2aS,c.g2bg,c.g2ac);
-  else if (active===3&&g3) g3.draw(dt,c.sp,c.cBg,c.cFg);
+  else if (active===3&&g3) g3.draw(dt,c.sp,c.cBg,c.cFg,c.cs);
   else if (active===4&&g4) g4.draw(dt,c.sp,c.nd,c.na,c.nb);
   document.getElementById('globe-wrap').style.background=active===3?c.cBg:'#ffffff';
   // 풀스크린 오버레이에 복사
@@ -665,6 +671,7 @@ document.getElementById('alpha-land').addEventListener('input',e=>{document.getE
 document.getElementById('alpha-sea').addEventListener('input',e=>{document.getElementById('as-val').textContent=e.target.value+'%';});
 document.getElementById('g2-alpha-land').addEventListener('input',e=>{document.getElementById('g2-al-val').textContent=e.target.value+'%';});
 document.getElementById('g2-alpha-sea').addEventListener('input',e=>{document.getElementById('g2-as-val').textContent=e.target.value+'%';});
+document.getElementById('coin-size').addEventListener('input',e=>{document.getElementById('cs-val').textContent=e.target.value+'%';});
 document.getElementById('speed').addEventListener('input',e=>{document.getElementById('sp-val').textContent=e.target.value+'×';});
 
 // ── 전체보기 ───────────────────────────────────────────────
