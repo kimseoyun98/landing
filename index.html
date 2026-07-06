@@ -121,6 +121,7 @@
   <button class="tab active" data-g="1">Globe 1 · 화폐 문자</button>
   <button class="tab"        data-g="2">Globe 2 · 구면 투영</button>
   <button class="tab"        data-g="3">Globe 3 · 코인</button>
+  <button class="tab"        data-g="4">Globe 4 · Neo</button>
 </div>
 
 <!-- Canvas -->
@@ -173,6 +174,21 @@
     <div class="row">
       <label>코인색</label>
       <input type="color" id="coin-fg" value="#FFFFFF" />
+    </div>
+  </div>
+
+  <!-- Globe 4 (Neo) controls -->
+  <div id="ctrl-g4" style="display:none">
+    <div class="row" style="margin-bottom:10px">
+      <span class="desc-chip">도트 매트릭스 · 아크 애니메이션 · 구면 투영</span>
+    </div>
+    <div class="row">
+      <label>점 색</label>
+      <input type="color" id="neo-dot" value="#1d4ed8" />
+    </div>
+    <div class="row">
+      <label>아크 색</label>
+      <input type="color" id="neo-arc" value="#3b82f6" />
     </div>
   </div>
 </div>
@@ -544,15 +560,155 @@ class Globe3 {
           ctx.beginPath(); ctx.arc(px, py, Math.max(0.5, dotR), 0, Math.PI*2); ctx.fill();
         }
       }
+    const skip = 5;
+    for (let py = 0; py < earthH; py += skip) {
+      for (let px = 0; px < earthW; px += skip) {
+        if ((earthData[(py*earthW+px)*4] ?? 255) >= 128) continue;
+        const lon = (px/earthW - 0.5) * Math.PI * 2;
+        const lat = (0.5 - py/earthH) * Math.PI;
+        this.dots.push({ lat, lon, s: 0.7 + Math.random()*0.8 });
+      }
     }
-    ctx.globalAlpha = 1;
+  }
+  _project(lat, lon) {
+    const lon2 = lon + this.scrollU * Math.PI * 2;
+    const cosLat = Math.cos(lat);
+    const x3 = cosLat * Math.sin(lon2);
+    const y3 = Math.sin(lat);
+    const z3 = cosLat * Math.cos(lon2);
+    const y2 = y3*neoCosT - z3*neoSinT;
+    const z2 = y3*neoSinT + z3*neoCosT;
+    const R = SIZE * 0.36;
+    return { sx: CX + R*x3, sy: CY - R*y2, z: z2, R };
+  }
+  _spawnArc() {
+    const a = Math.floor(Math.random()*NEO_CITIES.length);
+    let b; do { b = Math.floor(Math.random()*NEO_CITIES.length); } while(b===a);
+    this.arcs.push({ from: NEO_CITIES[a], to: NEO_CITIES[b],
+      head: 0, tail: 0,
+      speed: 0.28 + Math.random()*0.18,
+      tailDelay: 0.20 + Math.random()*0.12,
+    });
+  }
+  _bezierPt(t, p0, p1, p2) {
+    const u = 1-t;
+    return { x: u*u*p0.x + 2*u*t*p1.x + t*t*p2.x,
+             y: u*u*p0.y + 2*u*t*p1.y + t*t*p2.y };
+  }
+  _drawArc(p0, cp, p2, t0, t1, fadeAlpha, arcColor) {
+    const N = Math.ceil((t1-t0)*50); if (N<1) return;
+    ctx.beginPath();
+    for (let i=0;i<=N;i++) {
+      const t = t0 + (t1-t0)*(i/N);
+      const p = this._bezierPt(t, p0, cp, p2);
+      i===0 ? ctx.moveTo(p.x,p.y) : ctx.lineTo(p.x,p.y);
+    }
+    ctx.strokeStyle = arcColor + '50'; ctx.lineWidth = 3.5;
+    ctx.shadowColor = arcColor; ctx.shadowBlur = 14;
+    ctx.globalAlpha = fadeAlpha; ctx.stroke();
+    ctx.strokeStyle = arcColor + 'CC'; ctx.lineWidth = 1.2;
+    ctx.shadowBlur = 6; ctx.stroke();
+    ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+  }
+  draw(dt, speedMul, dotColor, arcColor) {
+    this.scrollU = (this.scrollU + 0.018 * speedMul * dt) % 1;
+    const R = SIZE * 0.36;
+
+    // Background
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,SIZE,SIZE);
+
+    // Grid
+    ctx.save(); ctx.strokeStyle = dotColor + '18'; ctx.lineWidth = 0.5;
+    const GS = 80;
+    for (let ld=-60;ld<=60;ld+=30) {
+      ctx.beginPath(); let st=false;
+      for (let i=0;i<=GS;i++) {
+        const p=this._project(ld*Math.PI/180,(i/GS)*Math.PI*2-Math.PI-Math.PI);
+        if(p.z<=0){st=false;continue;}
+        st?ctx.lineTo(p.sx,p.sy):(ctx.moveTo(p.sx,p.sy),st=true);
+      } ctx.stroke();
+    }
+    for (let lo=0;lo<360;lo+=30) {
+      ctx.beginPath(); let st=false;
+      for (let i=0;i<=GS;i++) {
+        const p=this._project((i/GS)*Math.PI-Math.PI/2,lo*Math.PI/180-Math.PI);
+        if(p.z<=0){st=false;continue;}
+        st?ctx.lineTo(p.sx,p.sy):(ctx.moveTo(p.sx,p.sy),st=true);
+      } ctx.stroke();
+    }
+    ctx.restore();
+
+    // Land dots
+    ctx.shadowColor = dotColor;
+    for (const d of this.dots) {
+      const p = this._project(d.lat, d.lon - Math.PI);
+      if (p.z <= 0.02) continue;
+      const fore = Math.min(1, p.z);
+      ctx.globalAlpha = 0.3 + fore*0.65;
+      ctx.shadowBlur  = fore > 0.7 ? 2 : 0;
+      ctx.fillStyle   = dotColor;
+      ctx.beginPath(); ctx.arc(p.sx,p.sy, d.s*(0.5+fore*0.5), 0, Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+
+    // City markers
+    for (const city of NEO_CITIES) {
+      const p = this._project(city.lat, city.lon - Math.PI);
+      if (p.z <= 0.05) continue;
+      ctx.globalAlpha = p.z * 0.7;
+      ctx.strokeStyle = dotColor; ctx.lineWidth = 0.8;
+      ctx.shadowColor = dotColor; ctx.shadowBlur = 5;
+      ctx.beginPath(); ctx.arc(p.sx, p.sy, 4, 0, Math.PI*2); ctx.stroke();
+      ctx.globalAlpha = p.z;
+      ctx.fillStyle = '#1a1a1a'; ctx.shadowBlur = 0;
+      ctx.beginPath(); ctx.arc(p.sx, p.sy, 1.5, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+
+    // Arcs
+    this.arcTimer += dt;
+    if (this.arcTimer >= 1.2 && this.arcs.length < 8) { this._spawnArc(); this.arcTimer = 0; }
+    this.arcs = this.arcs.filter(a => !(a.head>=1 && a.tail>=1));
+    for (const arc of this.arcs) {
+      arc.head = Math.min(1, arc.head + arc.speed*dt);
+      arc.tail = Math.max(0, arc.head - arc.tailDelay);
+      const pF = this._project(arc.from.lat, arc.from.lon - Math.PI);
+      const pT = this._project(arc.to.lat,   arc.to.lon   - Math.PI);
+      if (pF.z<=0 || pT.z<=0) continue;
+      const p0={x:pF.sx,y:pF.sy}, p2={x:pT.sx,y:pT.sy};
+      const mx=(p0.x+p2.x)/2, my=(p0.y+p2.y)/2;
+      const dx=mx-CX, dy=my-CY, dist=Math.hypot(dx,dy)||1;
+      const chord=Math.hypot(p2.x-p0.x,p2.y-p0.y);
+      const cp={x:mx+(dx/dist)*(chord*0.35+R*0.06), y:my+(dy/dist)*(chord*0.35+R*0.06)};
+      const fade = arc.head>=0.9 ? (1-arc.head)/0.1 : 1;
+      this._drawArc(p0, cp, p2, arc.tail, arc.head, fade, arcColor);
+      if (arc.head<0.98) {
+        const tip = this._bezierPt(arc.head, p0, cp, p2);
+        ctx.fillStyle='#1a1a1a'; ctx.shadowColor=arcColor; ctx.shadowBlur=10;
+        ctx.globalAlpha=Math.min(1,fade);
+        ctx.beginPath(); ctx.arc(tip.x,tip.y,2,0,Math.PI*2); ctx.fill();
+        ctx.shadowBlur=0; ctx.globalAlpha=1;
+      }
+    }
+
+    // Sphere shadow
+    const sg = ctx.createRadialGradient(CX+R*0.15,CY+R*0.15,R*0.1,CX,CY,R);
+    sg.addColorStop(0,'rgba(0,0,0,0)'); sg.addColorStop(0.7,'rgba(0,0,0,0)');
+    sg.addColorStop(1,'rgba(0,0,0,0.07)');
+    ctx.fillStyle=sg; ctx.beginPath(); ctx.arc(CX,CY,R,0,Math.PI*2); ctx.fill();
+    // Rim
+    const halo=ctx.createRadialGradient(CX,CY,R*0.95,CX,CY,R*1.15);
+    halo.addColorStop(0,'rgba(0,0,0,0.05)'); halo.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=halo; ctx.beginPath(); ctx.arc(CX,CY,R*1.15,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,0.07)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.arc(CX,CY,R,0,Math.PI*2); ctx.stroke();
   }
 }
 
 // ═══════════════════════════════════════════════════════════════════════
 // Main loop
 // ═══════════════════════════════════════════════════════════════════════
-let globe1 = null, globe2 = null, globe3 = null;
+let globe1 = null, globe2 = null, globe3 = null, globe4 = null;
 let activeGlobe = 1;
 let animId = null;
 let lastTime = 0;
@@ -572,6 +728,8 @@ function getControls() {
     bgColor:   document.getElementById('bg-sel').value,
     coinBg:    document.getElementById('coin-bg').value,
     coinFg:    document.getElementById('coin-fg').value,
+    neoDot:    document.getElementById('neo-dot').value,
+    neoArc:    document.getElementById('neo-arc').value,
     speed:     parseFloat(document.getElementById('speed').value),
   };
 }
@@ -590,19 +748,24 @@ function loop(now) {
     globe2.draw(dt, c.speed, c.colorLand, c.colorSea, c.alphaLand, c.alphaSea, c.bgColor);
   } else if (activeGlobe === 3 && globe3) {
     globe3.draw(dt, c.speed, c.coinBg, c.coinFg);
+  } else if (activeGlobe === 4 && globe4) {
+    globe4.draw(dt, c.speed, c.neoDot, c.neoArc);
   }
 
   // Sync globe-wrap background
-  const bg = activeGlobe === 3 ? c.coinBg : c.bgColor;
+  const bg = activeGlobe === 3 ? c.coinBg : '#ffffff';
   document.getElementById('globe-wrap').style.background = bg;
 
   animId = requestAnimationFrame(loop);
 }
 
+let globe4 = null;
+
 function initGlobes() {
   globe1 = new Globe1();
   globe2 = new Globe2();
   globe3 = new Globe3();
+  globe4 = new Globe4();
   lastTime = performance.now();
   animId = requestAnimationFrame(loop);
 }
@@ -612,13 +775,21 @@ loadEarth(initGlobes);
 // ═══════════════════════════════════════════════════════════════════════
 // UI wiring
 // ═══════════════════════════════════════════════════════════════════════
+const DESCS = {
+  1: '화폐 글리프 · 평면 투영 · 기본 속도 25초/회전',
+  2: '화폐 글리프 · 구면 투영(18° 틸트) · 12초/회전',
+  3: '코인 그리드 · 헥스 배치 · 20초/회전',
+  4: '도트 매트릭스 · 도시 아크 · Stripe 스타일',
+};
+
 document.querySelectorAll('.tab').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     activeGlobe = parseInt(btn.dataset.g);
-    document.getElementById('ctrl-g1g2').style.display = activeGlobe === 3 ? 'none' : 'block';
+    document.getElementById('ctrl-g1g2').style.display = [1,2].includes(activeGlobe) ? 'block' : 'none';
     document.getElementById('ctrl-g3').style.display   = activeGlobe === 3 ? 'block' : 'none';
+    document.getElementById('ctrl-g4').style.display   = activeGlobe === 4 ? 'block' : 'none';
     document.getElementById('globe-desc').textContent  = DESCS[activeGlobe] || '';
   });
 });
