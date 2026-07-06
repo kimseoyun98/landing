@@ -170,7 +170,7 @@
     </div>
     <div class="row">
       <label>선 두께</label>
-      <input type="range" id="g1-sw" min="0.5" max="5" step="0.5" value="1.2" />
+      <input type="range" id="g1-sw" min="0" max="5" step="0.5" value="1.2" />
       <span class="val" id="g1sw-val">1.2</span>
     </div>
   </div>
@@ -224,14 +224,14 @@
     <div class="row">
       <label>스타일</label>
       <select id="g2-style" style="background:#f5f5f5;color:#1a1a1a;border:1px solid #ddd;padding:4px 8px;border-radius:8px;font-size:12px">
-        <option value="stroke">Stroke</option>
-        <option value="filled" selected>Filled</option>
+        <option value="stroke" selected>Stroke</option>
+        <option value="filled">Filled</option>
         <option value="tinted">Tinted</option>
       </select>
     </div>
     <div class="row">
       <label>선 두께</label>
-      <input type="range" id="g2-sw" min="0.5" max="5" step="0.5" value="1.2" />
+      <input type="range" id="g2-sw" min="0" max="5" step="0.5" value="1.2" />
       <span class="val" id="g2sw-val">1.2</span>
     </div>
   </div>
@@ -263,7 +263,7 @@
     </div>
     <div class="row">
       <label>선 두께</label>
-      <input type="range" id="g3-sw" min="0.5" max="6" step="0.5" value="2" />
+      <input type="range" id="g3-sw" min="0" max="6" step="0.5" value="2" />
       <span class="val" id="g3sw-val">2</span>
     </div>
   </div>
@@ -299,7 +299,7 @@
     </div>
     <div class="row">
       <label>점 크기</label>
-      <input type="range" id="g4-sw" min="0.5" max="5" step="0.5" value="1.5" />
+      <input type="range" id="g4-sw" min="0" max="5" step="0.5" value="1.5" />
       <span class="val" id="g4sw-val">1.5</span>
     </div>
   </div>
@@ -393,7 +393,9 @@ class Globe1 {
     const fs=Math.max(8,Math.round(circleR*0.7*fill));
     ctx.fillStyle=bg; ctx.fillRect(0,0,SIZE,SIZE);
     if (!this.glyphs.length) return;
-    ctx.font=`${fw} ${fs}px sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.lineWidth=sw;
+    ctx.font=`${fw} ${fs}px sans-serif`; ctx.textAlign='center'; ctx.textBaseline='alphabetic'; ctx.lineWidth=sw;
+    // 실제 글리프 시각 중심 Y 보정
+    const m0=ctx.measureText('$'); const yFix=-(m0.actualBoundingBoxAscent-m0.actualBoundingBoxDescent)/2;
     for (const g of this.glyphs) {
       g.timer+=dt;
       if (g.timer>=g.interval) { g.timer=0;g.interval=0.7+Math.random()*2.8;g.char=CHARS[Math.floor(Math.random()*6)];g.flash=1; }
@@ -411,16 +413,16 @@ class Globe1 {
         ctx.globalAlpha=alpha;
         if (style==='filled') {
           ctx.beginPath(); ctx.arc(sx,sy,circleR,0,Math.PI*2); ctx.fillStyle=color; ctx.fill();
-          ctx.fillStyle=bg; ctx.fillText(g.char,sx,sy);
+          ctx.fillStyle=bg; ctx.fillText(g.char,sx,sy+yFix);
         } else if (style==='tinted') {
           ctx.globalAlpha=alpha*0.3;
           ctx.beginPath(); ctx.arc(sx,sy,circleR,0,Math.PI*2); ctx.fillStyle=color; ctx.fill();
           ctx.globalAlpha=alpha;
-          ctx.strokeStyle=color; ctx.stroke();
-          ctx.fillStyle=color; ctx.fillText(g.char,sx,sy);
+          if(sw>0){ctx.strokeStyle=color; ctx.stroke();}
+          ctx.fillStyle=color; ctx.fillText(g.char,sx,sy+yFix);
         } else {
-          ctx.strokeStyle=color; ctx.beginPath(); ctx.arc(sx,sy,circleR,0,Math.PI*2); ctx.stroke();
-          ctx.fillStyle=color; ctx.fillText(g.char,sx,sy);
+          if(sw>0){ctx.strokeStyle=color; ctx.beginPath(); ctx.arc(sx,sy,circleR,0,Math.PI*2); ctx.stroke();}
+          ctx.fillStyle=color; ctx.fillText(g.char,sx,sy+yFix);
         }
         ctx.globalAlpha=1;
       }
@@ -460,7 +462,7 @@ class Globe2 {
     let b; do{b=Math.floor(Math.random()*NEO_CITIES.length);}while(b===a);
     this.arcs.push({from:NEO_CITIES[a],to:NEO_CITIES[b],t:0,dur:1.6+Math.random()*1.2,alpha:0});
   }
-  draw(dt,sp,cL,cS,aL,aS,bg,ac,style='filled',sw=1.2,fw=600,to=0.85,fill=1) {
+  draw(dt,sp,cL,cS,aL,aS,bg,ac,style='stroke',sw=1.2,fw=600,to=0.85,fill=1) {
     this.scrollU=(this.scrollU+(1/24)*sp*dt)%1;
     const R=CX*0.88, scale=(R*2)/earthH;
     const rows=this._rows||65;
@@ -468,12 +470,8 @@ class Globe2 {
     ctx.fillStyle=bg; ctx.fillRect(0,0,SIZE,SIZE);
     ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(CX,CY,R,0,Math.PI*2); ctx.fill();
     if (!this.glyphs.length) return;
-
-    // 글리프 전체를 구면 클립 내에서 그리기 (스티커 효과)
-    ctx.save();
-    ctx.beginPath(); ctx.arc(CX,CY,R,0,Math.PI*2); ctx.clip();
-
-    ctx.font=`${fw} ${fs}px 'Inter',sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.lineWidth=sw;
+    ctx.font=`${fw} ${fs}px 'Inter',sans-serif`; ctx.textAlign='center'; ctx.textBaseline='alphabetic'; ctx.lineWidth=sw;
+    const m0b=ctx.measureText('$'); const yFixB=-(m0b.actualBoundingBoxAscent-m0b.actualBoundingBoxDescent)/2;
     for (const g of this.glyphs) {
       const lat=(0.5-g.ev)*Math.PI, cosLat=Math.cos(lat);
       if (g.variation>cosLat*cosLat*1.15) continue;
@@ -481,43 +479,32 @@ class Globe2 {
       const delta=(rawU-0.5)*Math.PI*2;
       const x3=cosLat*Math.sin(delta),y3=Math.sin(lat),z3=cosLat*Math.cos(delta);
       const y2=y3*cosT2-z3*sinT2, z2=y3*sinT2+z3*cosT2;
-      if (z2<=0.05) continue;
+      if (z2<=0) continue;
       if ((g.variation*13.71)%1 > Math.abs(Math.cos(delta))*1.2) continue;
       const sx=CX+R*x3, sy=CY-R*y2;
       const base=g.isLand?(0.72+g.variation*0.28)*aL:(0.06+g.variation*0.12)*aS;
-      // 구면 안쪽으로 갈수록 연하게 (z2로 alpha만 조절, 크기는 고정)
-      const alpha=Math.min(1,base*(0.4+0.6*z2)*to);
+      const alpha=Math.min(1,base*(0.35+0.65*z2)*to);
       if (alpha<=0.003) continue;
-      const rr=circleR; // 크기 고정 - 스티커잘 달라붙은 효과
+      const rr=circleR*(0.55+0.45*z2);
       const color=g.isLand?cL:cS;
       ctx.globalAlpha=alpha;
       if (style==='filled') {
         ctx.beginPath(); ctx.arc(sx,sy,rr,0,Math.PI*2); ctx.fillStyle=color; ctx.fill();
-        ctx.fillStyle=bg; ctx.fillText(g.char,sx,sy);
+        ctx.fillStyle=bg; ctx.fillText(g.char,sx,sy+yFixB);
       } else if (style==='tinted') {
         ctx.globalAlpha=alpha*0.3;
         ctx.beginPath(); ctx.arc(sx,sy,rr,0,Math.PI*2); ctx.fillStyle=color; ctx.fill();
         ctx.globalAlpha=alpha;
-        ctx.strokeStyle=color; ctx.stroke();
-        ctx.fillStyle=color; ctx.fillText(g.char,sx,sy);
+        if(sw>0){ctx.strokeStyle=color; ctx.stroke();}
+        ctx.fillStyle=color; ctx.fillText(g.char,sx,sy+yFixB);
       } else {
-        ctx.strokeStyle=color; ctx.beginPath(); ctx.arc(sx,sy,rr,0,Math.PI*2); ctx.stroke();
-        ctx.fillStyle=color; ctx.fillText(g.char,sx,sy);
+        ctx.beginPath(); ctx.arc(sx,sy,rr,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
+        if(sw>0){ctx.strokeStyle=color; ctx.stroke();}
+        ctx.fillStyle=color; ctx.fillText(g.char,sx,sy+yFixB);
       }
       ctx.globalAlpha=1;
     }
-
-    // 구면 3D 음영 오버레이 (스티커가 공에 붙은 느낌)
-    const grad=ctx.createRadialGradient(CX-R*0.25,CY-R*0.3,R*0.05,CX,CY,R);
-    grad.addColorStop(0,'rgba(255,255,255,0.10)');
-    grad.addColorStop(0.65,'rgba(0,0,0,0)');
-    grad.addColorStop(1,'rgba(0,0,0,0.22)');
-    ctx.globalAlpha=1; ctx.fillStyle=grad;
-    ctx.beginPath(); ctx.arc(CX,CY,R,0,Math.PI*2); ctx.fill();
-
-    ctx.restore();
     ctx.globalAlpha=1;
-
     // 아크
     this.arcTimer+=dt;
     if (this.arcTimer>0.7){this.arcTimer=0;if(this.arcs.length<7)this._spawnArc();}
@@ -543,6 +530,7 @@ class Globe2 {
         i===0?ctx.moveTo(bx,by):ctx.lineTo(bx,by);
       }
       ctx.stroke();
+      // 도시 마커
       ctx.shadowBlur=0;
       ctx.globalAlpha=pA.z*(ac||cL?0.9:0.5); ctx.strokeStyle=ac||cL; ctx.lineWidth=1;
       ctx.beginPath(); ctx.arc(pA.sx,pA.sy,3,0,Math.PI*2); ctx.stroke();
