@@ -794,7 +794,7 @@ function loop(now) {
   if (fsActive) {
     const W=window.innerWidth, H=window.innerHeight;
     const c2=ctrl();
-    const bgCol=active===1?c2.bg:active===3?c2.cBg:'#ffffff';
+    const bgCol=active===1?c2.bg:active===2?c2.g2bg:active===3?c2.cBg:c2.nb;
     fsCtx.fillStyle=bgCol; fsCtx.fillRect(0,0,W,H);
     const sz=Math.min(W,H)*fsZoom;
     const cx=W/2+fsPan.x, cy=H/2+fsPan.y;
