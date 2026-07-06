@@ -118,7 +118,7 @@
 <div class="panel">
   <div class="panel-title">색상</div>
 
-  <div id="ctrl-g1g2">
+  <div id="ctrl-g1" style="display:block">
     <div class="row" style="margin-bottom:10px">
       <span class="desc-chip" id="globe-desc">화폐 글리프 · 평면 투영 · 25초/회전</span>
     </div>
@@ -144,6 +144,30 @@
         <option value="#0d0d0d">검정</option>
         <option value="#1c1a17">다크브라운</option>
       </select>
+    </div>
+  </div>
+
+  <div id="ctrl-g2" style="display:none">
+    <div class="row" style="margin-bottom:10px">
+      <span class="desc-chip">화폐 글리프 · 구면 투영(18° 틸르트) · 12초/회전</span>
+    </div>
+    <div class="row">
+      <div style="width:10px;height:10px;border-radius:50%;background:#FF7300;flex-shrink:0"></div>
+      <label>육지 색</label>
+      <input type="color" id="g2-land" value="#FF7300" />
+      <input type="range" id="g2-alpha-land" min="0" max="100" value="90" />
+      <span class="val" id="g2-al-val">90%</span>
+    </div>
+    <div class="row">
+      <div style="width:10px;height:10px;border-radius:50%;background:#8B95A1;flex-shrink:0"></div>
+      <label>바다 색</label>
+      <input type="color" id="g2-sea" value="#8B95A1" />
+      <input type="range" id="g2-alpha-sea" min="0" max="100" value="60" />
+      <span class="val" id="g2-as-val">60%</span>
+    </div>
+    <div class="row">
+      <label>바깥 배경</label>
+      <input type="color" id="g2-bg" value="#f4f4f4" />
     </div>
   </div>
 
@@ -307,9 +331,11 @@ class Globe2 {
   }
   draw(dt,sp,cL,cS,aL,aS,bg) {
     this.scrollU=(this.scrollU+(1/12)*sp*dt)%1;
-    const R=this.radius, scale=(R*2)/earthH;
+    const R=CX*0.88, scale=(R*2)/earthH;
     const circleR=Math.max(4,(earthH*scale/65)*0.49), fs=Math.max(9,Math.round(circleR*1.1));
+    // 바깥 배경 때운 후 구면 내부를 흰색으로 체우기
     ctx.fillStyle=bg; ctx.fillRect(0,0,SIZE,SIZE);
+    ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(CX,CY,R,0,Math.PI*2); ctx.fill();
     if (!this.glyphs.length) return;
     ctx.font=`600 ${fs}px 'Inter',sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.lineWidth=1.2;
     for (const g of this.glyphs) {
@@ -459,7 +485,9 @@ class Globe4 {
   draw(dt,sp,dc,ac,bg) {
     this.scrollU=(this.scrollU+0.018*sp*dt)%1;
     const R=SIZE*0.36;
+    // 바깥 배경 때운 후 구면 내부를 흰색으로 체우기
     ctx.fillStyle=bg||'#ffffff'; ctx.fillRect(0,0,SIZE,SIZE);
+    ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(CX,CY,R,0,Math.PI*2); ctx.fill();
     // grid
     ctx.save();ctx.strokeStyle=dc+'18';ctx.lineWidth=0.5;
     for(let ld=-60;ld<=60;ld+=30){ctx.beginPath();let st=false;for(let i=0;i<=80;i++){const p=this._proj(ld*Math.PI/180,(i/80)*Math.PI*2-Math.PI*2);if(p.z<=0){st=false;continue;}st?ctx.lineTo(p.sx,p.sy):(ctx.moveTo(p.sx,p.sy),st=true);}ctx.stroke();}
@@ -513,6 +541,12 @@ function ctrl() {
     aL:parseInt(document.getElementById('alpha-land').value)/100,
     aS:parseInt(document.getElementById('alpha-sea').value)/100,
     bg:document.getElementById('bg-sel').value,
+    // Globe 2 전용
+    g2cL:document.getElementById('g2-land').value,
+    g2cS:document.getElementById('g2-sea').value,
+    g2aL:parseInt(document.getElementById('g2-alpha-land').value)/100,
+    g2aS:parseInt(document.getElementById('g2-alpha-sea').value)/100,
+    g2bg:document.getElementById('g2-bg').value,
     cBg:document.getElementById('coin-bg').value,
     cFg:document.getElementById('coin-fg').value,
     nd:document.getElementById('neo-dot').value,
@@ -527,7 +561,7 @@ function loop(now) {
   if (!earthReady){requestAnimationFrame(loop);return;}
   const c=ctrl();
   if      (active===1&&g1) g1.draw(dt,c.sp,c.cL,c.cS,c.aL,c.aS,c.bg);
-  else if (active===2&&g2) g2.draw(dt,c.sp,c.cL,c.cS,c.aL,c.aS,c.bg);
+  else if (active===2&&g2) g2.draw(dt,c.sp,c.g2cL,c.g2cS,c.g2aL,c.g2aS,c.g2bg);
   else if (active===3&&g3) g3.draw(dt,c.sp,c.cBg,c.cFg);
   else if (active===4&&g4) g4.draw(dt,c.sp,c.nd,c.na,c.nb);
   document.getElementById('globe-wrap').style.background=active===3?c.cBg:'#ffffff';
@@ -565,10 +599,10 @@ document.querySelectorAll('.tab').forEach(btn=>{
     document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     active=parseInt(btn.dataset.g);
-    document.getElementById('ctrl-g1g2').style.display=[1,2].includes(active)?'block':'none';
+    document.getElementById('ctrl-g1').style.display=active===1?'block':'none';
+    document.getElementById('ctrl-g2').style.display=active===2?'block':'none';
     document.getElementById('ctrl-g3').style.display=active===3?'block':'none';
     document.getElementById('ctrl-g4').style.display=active===4?'block':'none';
-    document.getElementById('globe-desc').textContent=DESCS[active]||'';
     // 원형 클립: Globe 1, 3만 / Globe 2, 4는 물체만
     const wrap=document.getElementById('globe-wrap');
     if([1,3].includes(active)){
@@ -580,6 +614,8 @@ document.querySelectorAll('.tab').forEach(btn=>{
 });
 document.getElementById('alpha-land').addEventListener('input',e=>{document.getElementById('al-val').textContent=e.target.value+'%';});
 document.getElementById('alpha-sea').addEventListener('input',e=>{document.getElementById('as-val').textContent=e.target.value+'%';});
+document.getElementById('g2-alpha-land').addEventListener('input',e=>{document.getElementById('g2-al-val').textContent=e.target.value+'%';});
+document.getElementById('g2-alpha-sea').addEventListener('input',e=>{document.getElementById('g2-as-val').textContent=e.target.value+'%';});
 document.getElementById('speed').addEventListener('input',e=>{document.getElementById('sp-val').textContent=e.target.value+'×';});
 
 // ── 전체보기 ───────────────────────────────────────────────
