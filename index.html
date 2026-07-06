@@ -96,10 +96,10 @@
 <h1>Globe Viewer</h1>
 
 <div class="tabs">
-  <button class="tab active" data-g="1">Globe 1 · 화폐 문자</button>
-  <button class="tab"        data-g="2">Globe 2 · 구면 투영</button>
-  <button class="tab"        data-g="3">Globe 3 · 코인</button>
-  <button class="tab"        data-g="4">Globe 4 · Neo</button>
+  <button class="tab active" data-g="1">화폐 문자</button>
+  <button class="tab"        data-g="2">구면 투영</button>
+  <button class="tab"        data-g="3">코인</button>
+  <button class="tab"        data-g="4">Neo</button>
 </div>
 
 <div class="globe-outer">
@@ -391,6 +391,7 @@ class Globe1 {
     const cr=Math.hypot(CX,CY), scale=(cr*2)/earthH, earthPx=earthW*scale;
     const circleR=Math.max(4,(earthH*scale/rows)*0.44);
     const fs=Math.round(circleR*0.7*fill);
+    const limitR = (SIZE/2) - circleR - (sw > 0 ? sw : 0);
     ctx.fillStyle=bg; ctx.fillRect(0,0,SIZE,SIZE);
     if (!this.glyphs.length) return;
     ctx.font=`${fw} ${fs}px sans-serif`; ctx.textAlign='center'; ctx.textBaseline='alphabetic'; ctx.lineWidth=sw;
@@ -404,7 +405,7 @@ class Globe1 {
       const sy=CY+(g.ev-0.5)*earthH*scale;
       for (const uOff of [0,-1,1]) {
         const sx=CX+(rawU+uOff-0.5)*earthPx, dx=sx-CX, dy=sy-CY;
-        if (dx*dx+dy*dy>cr*cr) continue;
+        if (dx*dx+dy*dy>limitR*limitR) continue;
         const mul=g.isLand?aL:aS;
         const base=g.isLand?(0.58+g.variation*0.32)*mul:(0.18+g.variation*0.18)*mul;
         const alpha=Math.min(1,(base+g.flash*0.35)*to);
