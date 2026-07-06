@@ -395,7 +395,7 @@ class Globe1 {
     if (!this.glyphs.length) return;
     ctx.font=`${fw} ${fs}px sans-serif`; ctx.textAlign='center'; ctx.textBaseline='alphabetic'; ctx.lineWidth=sw;
     // 실제 글리프 시각 중심 Y 보정
-    const m0=ctx.measureText('$'); const yFix=-(m0.actualBoundingBoxAscent-m0.actualBoundingBoxDescent)/2;
+    const m0=ctx.measureText('$'); const yFix=(m0.actualBoundingBoxAscent-m0.actualBoundingBoxDescent)/2;
     for (const g of this.glyphs) {
       g.timer+=dt;
       if (g.timer>=g.interval) { g.timer=0;g.interval=0.7+Math.random()*2.8;g.char=CHARS[Math.floor(Math.random()*6)];g.flash=1; }
@@ -471,7 +471,7 @@ class Globe2 {
     ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(CX,CY,R,0,Math.PI*2); ctx.fill();
     if (!this.glyphs.length) return;
     ctx.font=`${fw} ${fs}px 'Inter',sans-serif`; ctx.textAlign='center'; ctx.textBaseline='alphabetic'; ctx.lineWidth=sw;
-    const m0b=ctx.measureText('$'); const yFixB=-(m0b.actualBoundingBoxAscent-m0b.actualBoundingBoxDescent)/2;
+    const m0b=ctx.measureText('$'); const yFixB=(m0b.actualBoundingBoxAscent-m0b.actualBoundingBoxDescent)/2;
     for (const g of this.glyphs) {
       const lat=(0.5-g.ev)*Math.PI, cosLat=Math.cos(lat);
       if (g.variation>cosLat*cosLat*1.15) continue;
