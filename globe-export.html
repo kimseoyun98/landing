@@ -358,7 +358,7 @@ function setStatus(m) { document.getElementById('status-text').textContent=m; }
 const canvas=document.getElementById('globe-canvas');
 canvas.width=Math.round(SIZE*DPR); canvas.height=Math.round(SIZE*DPR);
 canvas.style.width=SIZE+'px'; canvas.style.height=SIZE+'px';
-const ctx=canvas.getContext('2d');
+let ctx=canvas.getContext('2d');
 ctx.setTransform(DPR,0,0,DPR,0,0);
 let CX=SIZE/2, CY=SIZE/2;
 
@@ -781,33 +781,54 @@ function ctrl() {
   };
 }
 
-function loop(now) {
-  const dt=Math.min((now-lastT)/1000,0.05); lastT=now;
-  if (!earthReady){requestAnimationFrame(loop);return;}
-  const c=ctrl();
+function _drawGlobe(dt,c) {
   if      (active===1&&g1) g1.draw(dt,c.sp,c.cL,c.cS,c.aL,c.aS,c.bg,c.g1st,c.g1sw,c.g1fw,c.g1to,c.g1fill);
   else if (active===2&&g2) g2.draw(dt,c.sp,c.g2cL,c.g2cS,c.g2aL,c.g2aS,c.g2bg,c.g2ac,c.g2st,c.g2sw,c.g2fw,c.g2to,c.g2fill);
   else if (active===3&&g3) g3.draw(dt,c.sp,c.cBg,c.cFg,c.cs,c.g3st,c.g3sw);
   else if (active===4&&g4) g4.draw(dt,c.sp,c.nd,c.na,c.nb,c.g4st,c.g4sw);
-  document.getElementById('globe-wrap').style.background=active===1?c.bg:active===3?c.cBg:'#ffffff';
-  // 풀스크린 오버레이에 복사
+}
+
+function loop(now) {
+  const dt=Math.min((now-lastT)/1000,0.05); lastT=now;
+  if (!earthReady){requestAnimationFrame(loop);return;}
+  const c=ctrl();
+
   if (fsActive) {
+    // ── 전체보기: fsCtx에 직접 렌더링 (미유 없음) ──
     const W=window.innerWidth, H=window.innerHeight;
-    const c2=ctrl();
-    const bgCol=active===1?c2.bg:active===2?c2.g2bg:active===3?c2.cBg:c2.nb;
+    const bgCol=active===1?c.bg:active===2?c.g2bg:active===3?c.cBg:c.nb;
+    const sz=Math.min(W,H);
+    const scale=fsZoom*sz/SIZE;
+    const tx=W/2+fsPan.x-SIZE*scale/2;
+    const ty=H/2+fsPan.y-SIZE*scale/2;
+
+    // 1. 전체 배경 채우기
+    fsCtx.setTransform(DPR,0,0,DPR,0,0);
     fsCtx.fillStyle=bgCol; fsCtx.fillRect(0,0,W,H);
-    const sz=Math.min(W,H)*fsZoom;
-    const cx=W/2+fsPan.x, cy=H/2+fsPan.y;
-    const ox=cx-sz/2, oy=cy-sz/2;
-    if (active===1) {
-      fsCtx.save();
-      fsCtx.beginPath(); fsCtx.arc(cx,cy,sz/2,0,Math.PI*2); fsCtx.clip();
-      fsCtx.drawImage(canvas, ox, oy, sz, sz);
-      fsCtx.restore();
-    } else {
-      fsCtx.drawImage(canvas, ox, oy, sz, sz);
-    }
+
+    // 2. Globe 1: 원형 클립
+    if(active===1){ fsCtx.save(); fsCtx.beginPath(); fsCtx.arc(W/2+fsPan.x,H/2+fsPan.y,sz*fsZoom/2,0,Math.PI*2); fsCtx.clip(); }
+
+    // 3. pan·zoom 트랜스폼 적용
+    fsCtx.save();
+    fsCtx.translate(tx,ty);
+    fsCtx.scale(scale,scale);
+
+    // 4. ctx→fsCtx 스왓하여 글로브 렌더링
+    const _ctx=ctx; ctx=fsCtx;
+    _drawGlobe(dt,c);
+    ctx=_ctx;
+
+    // 5. 트랜스폼·클립 복원
+    fsCtx.restore();
+    if(active===1) fsCtx.restore();
+
+  } else {
+    // ── 패널 뷰: 주 canvas에 렌더링 ──
+    _drawGlobe(dt,c);
+    document.getElementById('globe-wrap').style.background=active===1?c.bg:active===3?c.cBg:'#ffffff';
   }
+
   requestAnimationFrame(loop);
 }
 
