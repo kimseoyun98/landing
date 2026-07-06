@@ -482,7 +482,7 @@ class Globe2 {
       const base=g.isLand?(0.72+g.variation*0.28)*aL:(0.06+g.variation*0.12)*aS;
       const alpha=Math.min(1,base*(0.35+0.65*z2)*to);
       if (alpha<=0.003) continue;
-      const rr=circleR*(0.55+0.45*z2);
+      const rr=circleR*(0.3+0.7*z2);
       const color=g.isLand?cL:cS;
       ctx.globalAlpha=alpha;
       if (style==='filled') {
@@ -495,8 +495,8 @@ class Globe2 {
         ctx.strokeStyle=color; ctx.stroke();
         ctx.fillStyle=color; ctx.fillText(g.char,sx,sy);
       } else {
-        ctx.beginPath(); ctx.arc(sx,sy,rr,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
-        ctx.strokeStyle=color; ctx.stroke(); ctx.fillStyle=color; ctx.fillText(g.char,sx,sy);
+        ctx.strokeStyle=color; ctx.beginPath(); ctx.arc(sx,sy,rr,0,Math.PI*2); ctx.stroke();
+        ctx.fillStyle=color; ctx.fillText(g.char,sx,sy);
       }
       ctx.globalAlpha=1;
     }
