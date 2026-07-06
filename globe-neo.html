@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>Globe Neo</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; background: #ffffff; overflow: hidden; }
+    canvas { position: fixed; inset: 0; }
+
+    /* ── Controls ──────────────────────────────────────── */
+    .hud {
+      position: fixed; bottom: 36px; left: 50%;
+      transform: translateX(-50%);
+      display: flex; gap: 8px; align-items: center;
+      background: rgba(255,255,255,0.85);
+      border: 1px solid rgba(0,0,0,0.08);
+      backdrop-filter: blur(16px);
+      border-radius: 100px; padding: 10px 24px;
+      font-family: -apple-system, 'Inter', sans-serif;
+      font-size: 12px; color: #555;
+      user-select: none;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+    }
+    .hud label { display: flex; align-items: center; gap: 8px; }
+    .hud input[type=range] {
+      width: 90px; accent-color: #3b82f6; height: 3px;
+    }
+    .hud input[type=color] {
+      width: 26px; height: 20px; border: 1px solid #ddd; background: none;
+      cursor: pointer; border-radius: 4px; padding: 0;
+    }
+    .sep { width: 1px; height: 16px; background: rgba(0,0,0,0.1); }
+    .dot-badge {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: #3b82f6;
+      box-shadow: 0 0 4px #3b82f680;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<div class="hud">
+  <div class="dot-badge" id="status-dot"></div>
+  <span id="status-txt">로딩 중...</span>
+  <div class="sep"></div>
+  <label>속도
+    <input type="range" id="speed" min="0.1" max="5" step="0.1" value="1" />
+  </label>
+  <div class="sep"></div>
+  <label>점 색
+    <input type="color" id="dot-color" value="#1d4ed8" />
+  </label>
+  <label>아크 색
+    <input type="color" id="arc-color" value="#3b82f6" />
+  </label>
+</div>
+
+<script>
+'use strict';
+
+// ── Canvas ──────────────────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+const DPR    = Math.min(window.devicePixelRatio || 1, 2);
+let W, H, CX, CY, R;
+
+function resize() {
+  W = window.innerWidth; H = window.innerHeight;
+  canvas.width  = Math.round(W * DPR);
+  canvas.height = Math.round(H * DPR);
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  CX = W / 2; CY = H / 2;
+  R  = Math.min(W, H) * 0.36;
+}
+resize();
+window.addEventListener('resize', () => { resize(); buildStars(); });
+
+// ── Stars ────────────────────────────────────────────────────────────────
+let stars = [];
+function buildStars() {
+  stars = [];
+  for (let i = 0; i < 260; i++) {
+    stars.push({
+      x: Math.random() * W, y: Math.random() * H,
+      r: Math.random() * 1.1,
+      a: Math.random() * 0.6 + 0.1,
+    });
+  }
+}
+buildStars();
+
+// ── Cities ───────────────────────────────────────────────────────────────
+const CITIES = [
+  [37.57, 126.98],  // Seoul
+  [35.68, 139.69],  // Tokyo
+  [31.23, 121.47],  // Shanghai
+  [39.90, 116.41],  // Beijing
+  [22.32, 114.17],  // Hong Kong
+  [1.35,  103.82],  // Singapore
+  [13.76, 100.50],  // Bangkok
+  [-33.87,151.21],  // Sydney
+  [28.61,  77.21],  // Delhi
+  [19.08,  72.88],  // Mumbai
+  [25.20,  55.27],  // Dubai
+  [30.04,  31.24],  // Cairo
+  [51.51,  -0.13],  // London
+  [48.86,   2.35],  // Paris
+  [52.52,  13.41],  // Berlin
+  [55.76,  37.62],  // Moscow
+  [59.33,  18.07],  // Stockholm
+  [47.38,   8.54],  // Zurich
+  [40.71, -74.01],  // New York
+  [34.05,-118.24],  // Los Angeles
+  [41.88, -87.63],  // Chicago
+  [43.65, -79.38],  // Toronto
+  [47.61,-122.33],  // Seattle
+  [19.43, -99.13],  // Mexico City
+  [-23.55,-46.63],  // São Paulo
+  [-34.60,-58.38],  // Buenos Aires
+  [-33.45,-70.67],  // Santiago
+  [6.52,    3.38],  // Lagos
+  [-26.20,  28.05], // Johannesburg
+  [4.71,  -74.07],  // Bogotá
+].map(([lat, lon]) => ({
+  lat: lat * Math.PI / 180,
+  lon: lon * Math.PI / 180,
+}));
+
+// ── Earth mask ───────────────────────────────────────────────────────────
+let earthData = null, earthW = 0, earthH = 0;
+let dots = [];      // land dot cloud {lat,lon,size}
+
+function loadEarth() {
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.src = 'http://localhost:5176/earth-mask.jpg';
+  img.onload = () => {
+    const off = document.createElement('canvas');
+    off.width = img.naturalWidth; off.height = img.naturalHeight;
+    const oc = off.getContext('2d');
+    oc.drawImage(img, 0, 0);
+    earthData = oc.getImageData(0, 0, off.width, off.height).data;
+    earthW = off.width; earthH = off.height;
+    buildDots();
+    setStatus('● 실시간');
+  };
+  img.onerror = () => setStatus('⚠ earth-mask 로드 실패');
+}
+
+function buildDots() {
+  dots = [];
+  const skip = 4;
+  for (let py = 0; py < earthH; py += skip) {
+    for (let px = 0; px < earthW; px += skip) {
+      const isLand = (earthData[(py * earthW + px) * 4] ?? 255) < 128;
+      if (!isLand) continue;
+      const lon = (px / earthW - 0.5) * Math.PI * 2;
+      const lat = (0.5 - py / earthH) * Math.PI;
+      dots.push({ lat, lon, s: 0.8 + Math.random() * 0.9 });
+    }
+  }
+}
+
+function setStatus(msg) {
+  document.getElementById('status-txt').textContent = msg;
+}
+
+loadEarth();
+
+// ── Projection ───────────────────────────────────────────────────────────
+// Orthographic with Y-tilt for slight top-down view
+const TILT = 12 * Math.PI / 180;
+const cosT = Math.cos(TILT), sinT = Math.sin(TILT);
+
+function project(lat, lon, scrollU) {
+  const lon2 = lon + scrollU * Math.PI * 2;
+  const cosLat = Math.cos(lat);
+  const x3 = cosLat * Math.sin(lon2);
+  const y3 = Math.sin(lat);
+  const z3 = cosLat * Math.cos(lon2);
+  // X-axis tilt
+  const y2 = y3 * cosT - z3 * sinT;
+  const z2 = y3 * sinT + z3 * cosT;
+  return {
+    sx: CX + R * x3,
+    sy: CY - R * y2,
+    z:  z2,           // >0 = front face
+    x3, y2, z2,
+  };
+}
+
+// ── Arc system ───────────────────────────────────────────────────────────
+class Arc {
+  constructor() { this.reset(); }
+  reset() {
+    // pick two different cities
+    const a = Math.floor(Math.random() * CITIES.length);
+    let b;
+    do { b = Math.floor(Math.random() * CITIES.length); } while (b === a);
+    this.from = CITIES[a];
+    this.to   = CITIES[b];
+    this.head = 0;      // 0→1 how far the arc tip has traveled
+    this.tail = 0;      // 0→1 the trailing edge
+    this.speed = 0.22 + Math.random() * 0.18;
+    this.tailDelay = 0.18 + Math.random() * 0.12; // tail starts after head this far
+    this.alpha = 1;
+    this.done  = false;
+  }
+  tick(dt) {
+    this.head = Math.min(1, this.head + this.speed * dt);
+    this.tail = Math.max(0, this.head - this.tailDelay);
+    if (this.head >= 1 && this.tail >= 1) this.done = true;
+  }
+}
+
+const MAX_ARCS = 10;
+let arcs = [];
+let arcTimer = 0;
+const ARC_INTERVAL = 1.2;
+
+// ── Bezier sample helper ─────────────────────────────────────────────────
+function bezierPt(t, p0, p1, p2) {
+  const u = 1 - t;
+  return {
+    x: u*u*p0.x + 2*u*t*p1.x + t*t*p2.x,
+    y: u*u*p0.y + 2*u*t*p1.y + t*t*p2.y,
+  };
+}
+
+function drawArcSegment(p0, cp, p2, t0, t1, alpha, arcColor) {
+  const N = Math.ceil((t1 - t0) * 60);
+  if (N < 1) return;
+  ctx.beginPath();
+  for (let i = 0; i <= N; i++) {
+    const t = t0 + (t1 - t0) * (i / N);
+    const p = bezierPt(t, p0, cp, p2);
+    i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y);
+  }
+  // Outer glow
+  ctx.strokeStyle = arcColor + '40';
+  ctx.lineWidth = 4;
+  ctx.shadowColor = arcColor;
+  ctx.shadowBlur  = 18;
+  ctx.globalAlpha = alpha;
+  ctx.stroke();
+  // Core line
+  ctx.strokeStyle = arcColor + 'CC';
+  ctx.lineWidth = 1.5;
+  ctx.shadowBlur = 8;
+  ctx.stroke();
+  ctx.shadowBlur  = 0;
+  ctx.globalAlpha = 1;
+}
+
+// ── Main render ──────────────────────────────────────────────────────────
+let scrollU  = 0;
+let lastTime = 0;
+
+function getColor(id) { return document.getElementById(id).value; }
+function getSpeed()   { return parseFloat(document.getElementById('speed').value); }
+
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = Math.min((now - lastTime) / 1000, 0.05);
+  lastTime = now;
+
+  const speed    = getSpeed();
+  const dotColor = getColor('dot-color');
+  const arcColor = getColor('arc-color');
+
+  scrollU = (scrollU + 0.018 * speed * dt) % 1;
+
+  // ── Background
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, W, H);
+
+  // (라이트 모드: 별 없음)
+
+  // ── Grid lines (lat/lon)
+  ctx.save();
+  ctx.strokeStyle = `${dotColor}18`;
+  ctx.lineWidth   = 0.5;
+  const GRID_STEPS = 120;
+  // Latitude lines every 30°
+  for (let latDeg = -60; latDeg <= 60; latDeg += 30) {
+    const lat = latDeg * Math.PI / 180;
+    ctx.beginPath();
+    let started = false;
+    for (let i = 0; i <= GRID_STEPS; i++) {
+      const lon = (i / GRID_STEPS) * Math.PI * 2 - Math.PI;
+      const p = project(lat, lon - Math.PI, scrollU);
+      if (p.z <= 0) { started = false; continue; }
+      started ? ctx.lineTo(p.sx, p.sy) : (ctx.moveTo(p.sx, p.sy), started = true);
+    }
+    ctx.stroke();
+  }
+  // Longitude lines every 30°
+  for (let lonDeg = 0; lonDeg < 360; lonDeg += 30) {
+    const lon = lonDeg * Math.PI / 180;
+    ctx.beginPath();
+    let started = false;
+    for (let i = 0; i <= GRID_STEPS; i++) {
+      const lat = (i / GRID_STEPS) * Math.PI - Math.PI/2;
+      const p = project(lat, lon - Math.PI, scrollU);
+      if (p.z <= 0) { started = false; continue; }
+      started ? ctx.lineTo(p.sx, p.sy) : (ctx.moveTo(p.sx, p.sy), started = true);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // ── Land dots
+  if (earthData) {
+    ctx.shadowColor = dotColor;
+    for (const d of dots) {
+      const p = project(d.lat, d.lon - Math.PI, scrollU);
+      if (p.z <= 0.02) continue;
+      const fore = Math.min(1, p.z);
+      ctx.globalAlpha = 0.35 + fore * 0.55;
+      ctx.shadowBlur  = fore > 0.7 ? 3 : 0;
+      ctx.fillStyle   = dotColor;
+      ctx.beginPath(); ctx.arc(p.sx, p.sy, d.s * (0.5 + fore * 0.5), 0, Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur  = 0;
+  }
+
+  // ── City markers
+  for (const city of CITIES) {
+    const p = project(city.lat, city.lon - Math.PI, scrollU);
+    if (p.z <= 0.05) continue;
+    // Outer ring
+    ctx.globalAlpha = p.z * 0.6;
+    ctx.strokeStyle = dotColor;
+    ctx.lineWidth   = 0.8;
+    ctx.shadowColor = dotColor;
+    ctx.shadowBlur  = 6;
+    ctx.beginPath(); ctx.arc(p.sx, p.sy, 4, 0, Math.PI*2); ctx.stroke();
+    // Center dot
+    ctx.globalAlpha = p.z;
+    ctx.fillStyle   = '#ffffff';
+    ctx.shadowBlur  = 8;
+    ctx.beginPath(); ctx.arc(p.sx, p.sy, 1.5, 0, Math.PI*2); ctx.fill();
+    ctx.shadowBlur  = 0;
+  }
+  ctx.globalAlpha = 1;
+
+  // ── Arcs
+  arcTimer += dt;
+  if (arcTimer >= ARC_INTERVAL && arcs.length < MAX_ARCS) {
+    arcs.push(new Arc());
+    arcTimer = 0;
+  }
+  arcs = arcs.filter(a => !a.done);
+
+  for (const arc of arcs) {
+    arc.tick(dt);
+    const pFrom = project(arc.from.lat, arc.from.lon - Math.PI, scrollU);
+    const pTo   = project(arc.to.lat,   arc.to.lon   - Math.PI, scrollU);
+    // Both must be on front face
+    if (pFrom.z <= 0 || pTo.z <= 0) continue;
+
+    const p0 = {x: pFrom.sx, y: pFrom.sy};
+    const p2 = {x: pTo.sx,   y: pTo.sy};
+
+    // Control point: push midpoint outward from globe center
+    const mx = (p0.x + p2.x) / 2, my = (p0.y + p2.y) / 2;
+    const dx = mx - CX, dy = my - CY;
+    const dist = Math.hypot(dx, dy) || 1;
+    const chord = Math.hypot(p2.x - p0.x, p2.y - p0.y);
+    const elev = chord * 0.35 + R * 0.08;
+    const cp = {x: mx + (dx/dist) * elev, y: my + (dy/dist) * elev};
+
+    // Fade at tail end
+    const fadeAlpha = arc.head >= 0.9 ? (1 - arc.head) / 0.1 : 1;
+    drawArcSegment(p0, cp, p2, arc.tail, arc.head, Math.min(1, fadeAlpha), arcColor);
+
+    // Tip pulse dot
+    if (arc.head < 0.98) {
+      const tip = bezierPt(arc.head, p0, cp, p2);
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = arcColor;
+      ctx.shadowBlur  = 12;
+      ctx.globalAlpha = Math.min(1, fadeAlpha);
+      ctx.beginPath(); ctx.arc(tip.x, tip.y, 2.5, 0, Math.PI*2); ctx.fill();
+      ctx.shadowBlur  = 0;
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // ── Sphere shadow (라이트 모드 입체감) ───────────────────────────────
+  const shadowGrad = ctx.createRadialGradient(CX + R*0.2, CY + R*0.2, R*0.1, CX, CY, R);
+  shadowGrad.addColorStop(0, 'rgba(0,0,0,0)');
+  shadowGrad.addColorStop(0.7, 'rgba(0,0,0,0)');
+  shadowGrad.addColorStop(1, 'rgba(0,0,0,0.08)');
+  ctx.fillStyle = shadowGrad;
+  ctx.beginPath(); ctx.arc(CX, CY, R, 0, Math.PI*2); ctx.fill();
+
+  // Outer subtle drop-shadow ring
+  const halo = ctx.createRadialGradient(CX, CY, R * 0.95, CX, CY, R * 1.2);
+  halo.addColorStop(0, 'rgba(0,0,0,0.06)');
+  halo.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = halo;
+  ctx.beginPath(); ctx.arc(CX, CY, R * 1.2, 0, Math.PI*2); ctx.fill();
+
+  // Globe rim
+  ctx.strokeStyle = 'rgba(0,0,0,0.07)';
+  ctx.lineWidth   = 1;
+  ctx.beginPath(); ctx.arc(CX, CY, R, 0, Math.PI*2); ctx.stroke();
+}
+
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
