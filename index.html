@@ -169,6 +169,10 @@
       <label>바깥 배경</label>
       <input type="color" id="g2-bg" value="#f4f4f4" />
     </div>
+    <div class="row">
+      <label>아크 색</label>
+      <input type="color" id="g2-arc" value="#FF7300" />
+    </div>
   </div>
 
   <div id="ctrl-g3" style="display:none">
@@ -317,7 +321,7 @@ class Globe1 {
 // ── Globe 2: orthographic sphere ────────────────────────────────────────
 const TILT2=18*Math.PI/180, cosT2=Math.cos(TILT2), sinT2=Math.sin(TILT2);
 class Globe2 {
-  constructor() { this.scrollU=0;this.glyphs=[];this.radius=CX*0.88;this._build(); }
+  constructor() { this.scrollU=0;this.glyphs=[];this.arcs=[];this.arcTimer=0;this._build(); }
   _build() {
     if (!earthReady) return; this.glyphs=[];
     for (let r=0;r<65;r++) for (let c=0;c<130;c++) {
@@ -325,23 +329,36 @@ class Globe2 {
       const px=Math.min(Math.floor(eu*earthW),earthW-1);
       const py=Math.min(Math.floor(ev*earthH),earthH-1);
       this.glyphs.push({eu,ev,isLand:(earthData[(py*earthW+px)*4]??0)<128,
-        char:CHARS[Math.floor(Math.random()*6)],variation:Math.random(),
-        timer:Math.random()*3,interval:0.7+Math.random()*2.8,flash:0});
+        char:CHARS[Math.floor(Math.random()*6)],variation:Math.random()});
     }
   }
-  draw(dt,sp,cL,cS,aL,aS,bg) {
+  _proj(lat,lon) {
+    // 위도/경도 → Globe2 회전 투영 좌표
+    const eu=lon/(Math.PI*2)+0.5;
+    const rawU=(eu-CHINA_EU+0.5-this.scrollU+100)%1;
+    const delta=(rawU-0.5)*Math.PI*2;
+    const cosLat=Math.cos(lat);
+    const x3=cosLat*Math.sin(delta), y3=Math.sin(lat), z3=cosLat*Math.cos(delta);
+    const y2=y3*cosT2-z3*sinT2, z2=y3*sinT2+z3*cosT2;
+    const R=CX*0.88;
+    return {sx:CX+R*x3, sy:CY-R*y2, z:z2};
+  }
+  _spawnArc() {
+    const a=Math.floor(Math.random()*NEO_CITIES.length);
+    let b; do{b=Math.floor(Math.random()*NEO_CITIES.length);}while(b===a);
+    this.arcs.push({from:NEO_CITIES[a],to:NEO_CITIES[b],t:0,dur:1.6+Math.random()*1.2,alpha:0});
+  }
+  draw(dt,sp,cL,cS,aL,aS,bg,ac) {
     this.scrollU=(this.scrollU+(1/12)*sp*dt)%1;
     const R=CX*0.88, scale=(R*2)/earthH;
     const circleR=Math.max(4,(earthH*scale/65)*0.49), fs=Math.max(9,Math.round(circleR*1.1));
-    // 바깥 배경 때운 후 구면 내부를 흰색으로 체우기
+    // 배경
     ctx.fillStyle=bg; ctx.fillRect(0,0,SIZE,SIZE);
     ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(CX,CY,R,0,Math.PI*2); ctx.fill();
     if (!this.glyphs.length) return;
+    // 글리프 그리기 (플래시/바운스 없음)
     ctx.font=`600 ${fs}px 'Inter',sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.lineWidth=1.2;
     for (const g of this.glyphs) {
-      g.timer+=dt;
-      if (g.timer>=g.interval) { g.timer=0;g.interval=0.7+Math.random()*2.8;g.char=CHARS[Math.floor(Math.random()*6)];g.flash=1; }
-      if (g.flash>0) g.flash=Math.max(0,g.flash-dt*3.2);
       const lat=(0.5-g.ev)*Math.PI, cosLat=Math.cos(lat);
       if (g.variation>cosLat*cosLat*1.15) continue;
       const rawU=(g.eu-CHINA_EU+0.5-this.scrollU+100)%1;
@@ -352,17 +369,48 @@ class Globe2 {
       if ((g.variation*13.71)%1 > Math.abs(Math.cos(delta))*1.2) continue;
       const sx=CX+R*x3, sy=CY-R*y2;
       const base=g.isLand?(0.72+g.variation*0.28)*aL:(0.06+g.variation*0.12)*aS;
-      const alpha=Math.min(1,(base+g.flash*0.35)*(0.35+0.65*z2));
+      const alpha=Math.min(1,base*(0.35+0.65*z2));
       if (alpha<=0.003) continue;
-      const pop=easeOutBack(Math.min(1,1-g.flash));
-      const rr=circleR*(0.55+0.45*z2)*Math.max(0.01,pop);
+      const rr=circleR*(0.55+0.45*z2);
       const color=g.isLand?cL:cS;
       ctx.globalAlpha=alpha;
       ctx.beginPath(); ctx.arc(sx,sy,rr,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
       ctx.strokeStyle=color; ctx.stroke(); ctx.fillStyle=color;
-      const gs=rr/circleR;
-      if (gs<0.98) { ctx.save();ctx.translate(sx,sy);ctx.scale(gs,gs);ctx.fillText(g.char,0,0);ctx.restore(); }
-      else ctx.fillText(g.char,sx,sy);
+      ctx.fillText(g.char,sx,sy);
+    }
+    ctx.globalAlpha=1;
+    // 아크
+    this.arcTimer+=dt;
+    if (this.arcTimer>0.7){this.arcTimer=0;if(this.arcs.length<7)this._spawnArc();}
+    this.arcs=this.arcs.filter(a=>a.t<a.dur);
+    for(const arc of this.arcs){
+      arc.t+=dt; arc.alpha=Math.min(1,arc.t/0.3)*Math.min(1,(arc.dur-arc.t)/0.3);
+      const pA=this._proj(arc.from.lat,arc.from.lon-Math.PI);
+      const pB=this._proj(arc.to.lat,arc.to.lon-Math.PI);
+      if(pA.z<=0||pB.z<=0) continue;
+      const mx=(pA.sx+pB.sx)/2, my=(pA.sy+pB.sy)/2;
+      const d=Math.hypot(pB.sx-pA.sx,pB.sy-pA.sy);
+      const cx2=mx, cy2=my-d*0.45;
+      const prog=arc.t/arc.dur;
+      ctx.save(); ctx.globalAlpha=arc.alpha*0.7;
+      ctx.strokeStyle=ac||cL; ctx.lineWidth=1.5;
+      ctx.shadowColor=ac||cL; ctx.shadowBlur=8;
+      ctx.beginPath();
+      const steps=40;
+      for(let i=0;i<=Math.round(steps*prog);i++){
+        const tt=i/steps;
+        const bx=(1-tt)*(1-tt)*pA.sx+2*(1-tt)*tt*cx2+tt*tt*pB.sx;
+        const by=(1-tt)*(1-tt)*pA.sy+2*(1-tt)*tt*cy2+tt*tt*pB.sy;
+        i===0?ctx.moveTo(bx,by):ctx.lineTo(bx,by);
+      }
+      ctx.stroke();
+      // 도시 마커
+      ctx.shadowBlur=0;
+      ctx.globalAlpha=pA.z*(ac||cL?0.9:0.5); ctx.strokeStyle=ac||cL; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.arc(pA.sx,pA.sy,3,0,Math.PI*2); ctx.stroke();
+      ctx.globalAlpha=pB.z*(ac||cL?0.9:0.5);
+      ctx.beginPath(); ctx.arc(pB.sx,pB.sy,3,0,Math.PI*2); ctx.stroke();
+      ctx.restore();
     }
     ctx.globalAlpha=1;
   }
@@ -547,6 +595,7 @@ function ctrl() {
     g2aL:parseInt(document.getElementById('g2-alpha-land').value)/100,
     g2aS:parseInt(document.getElementById('g2-alpha-sea').value)/100,
     g2bg:document.getElementById('g2-bg').value,
+    g2ac:document.getElementById('g2-arc').value,
     cBg:document.getElementById('coin-bg').value,
     cFg:document.getElementById('coin-fg').value,
     nd:document.getElementById('neo-dot').value,
@@ -561,7 +610,7 @@ function loop(now) {
   if (!earthReady){requestAnimationFrame(loop);return;}
   const c=ctrl();
   if      (active===1&&g1) g1.draw(dt,c.sp,c.cL,c.cS,c.aL,c.aS,c.bg);
-  else if (active===2&&g2) g2.draw(dt,c.sp,c.g2cL,c.g2cS,c.g2aL,c.g2aS,c.g2bg);
+  else if (active===2&&g2) g2.draw(dt,c.sp,c.g2cL,c.g2cS,c.g2aL,c.g2aS,c.g2bg,c.g2ac);
   else if (active===3&&g3) g3.draw(dt,c.sp,c.cBg,c.cFg);
   else if (active===4&&g4) g4.draw(dt,c.sp,c.nd,c.na,c.nb);
   document.getElementById('globe-wrap').style.background=active===3?c.cBg:'#ffffff';
@@ -571,7 +620,7 @@ function loop(now) {
     fsCtx.fillStyle='#ffffff'; fsCtx.fillRect(0,0,W,H);
     const sz=Math.min(W,H);
     const ox=(W-sz)/2, oy=(H-sz)/2;
-    if ([1,3].includes(active)) {
+    if (active===1) {
       // Globe 1·3: 원형 클립 적용
       fsCtx.save();
       fsCtx.beginPath();
@@ -603,9 +652,9 @@ document.querySelectorAll('.tab').forEach(btn=>{
     document.getElementById('ctrl-g2').style.display=active===2?'block':'none';
     document.getElementById('ctrl-g3').style.display=active===3?'block':'none';
     document.getElementById('ctrl-g4').style.display=active===4?'block':'none';
-    // 원형 클립: Globe 1, 3만 / Globe 2, 4는 물체만
+    // 원형 클립: Globe 1만 / 2·3·4는 정사각형
     const wrap=document.getElementById('globe-wrap');
-    if([1,3].includes(active)){
+    if(active===1){
       wrap.classList.add('circle-clip'); wrap.classList.remove('free-form');
     } else {
       wrap.classList.add('free-form'); wrap.classList.remove('circle-clip');
