@@ -62,6 +62,33 @@
       font-size: 11px; color: #888; background: #f5f5f5;
       border-radius: 20px; padding: 4px 10px;
     }
+    /* ── 전체보기 버튼 ────────────────────────────────── */
+    .globe-outer { position: relative; display: inline-block; }
+    .fs-btn {
+      position: absolute; top: 10px; right: 10px;
+      background: rgba(255,255,255,0.92); border: 1px solid #ddd;
+      border-radius: 8px; padding: 5px 10px; font-size: 12px;
+      cursor: pointer; z-index: 20; color: #444;
+      box-shadow: 0 1px 6px rgba(0,0,0,.08);
+      transition: background .15s, color .15s;
+    }
+    .fs-btn:hover { background: #fff; color: #111; }
+    /* ── 풀스크린 오버레이 ──────────────────────────── */
+    #fs-overlay {
+      display: none; position: fixed; inset: 0;
+      background: #fff; z-index: 9999;
+      align-items: center; justify-content: center;
+    }
+    #fs-overlay.active { display: flex; }
+    #fs-canvas { display: block; }
+    .fs-close {
+      position: fixed; top: 20px; right: 24px;
+      background: rgba(0,0,0,0.06); border: none;
+      border-radius: 8px; padding: 8px 12px; font-size: 18px;
+      cursor: pointer; z-index: 10000; color: #444;
+      transition: background .15s;
+    }
+    .fs-close:hover { background: rgba(0,0,0,0.12); }
   </style>
 </head>
 <body>
@@ -75,8 +102,17 @@
   <button class="tab"        data-g="4">Globe 4 · Neo</button>
 </div>
 
-<div class="globe-wrap circle-clip" id="globe-wrap">
-  <canvas id="globe-canvas"></canvas>
+<div class="globe-outer">
+  <div class="globe-wrap circle-clip" id="globe-wrap">
+    <canvas id="globe-canvas"></canvas>
+  </div>
+  <button class="fs-btn" id="fs-btn">⛶ 전체보기</button>
+</div>
+
+<!-- 풀스크린 오버레이 -->
+<div id="fs-overlay">
+  <button class="fs-close" id="fs-close">✕</button>
+  <canvas id="fs-canvas"></canvas>
 </div>
 
 <div class="panel">
@@ -159,9 +195,9 @@
 
 // ── Shared ──────────────────────────────────────────────────────────────
 const EARTH_URL = 'http://localhost:5176/earth-mask.jpg';
-const CHARS     = ['$','€','£','¥','₩','₹'];
+const CHARS     = ['$','\u20ac','\u00a3','\u00a5','\u20a9','\u20b9'];
 const CHINA_EU  = 0.5 + 104 / 360;
-const SIZE      = 500;
+let SIZE = 500;
 const DPR       = window.devicePixelRatio || 1;
 
 function easeOutBack(t) {
@@ -195,13 +231,17 @@ canvas.width=Math.round(SIZE*DPR); canvas.height=Math.round(SIZE*DPR);
 canvas.style.width=SIZE+'px'; canvas.style.height=SIZE+'px';
 const ctx=canvas.getContext('2d');
 ctx.setTransform(DPR,0,0,DPR,0,0);
-const CX=SIZE/2, CY=SIZE/2;
+let CX=SIZE/2, CY=SIZE/2;
+
+// 풀스크린 캔버스
+const fsCanvas=document.getElementById('fs-canvas');
+const fsCtx=fsCanvas.getContext('2d');
+let fsActive=false;
 
 // ── Globe 1: flat equirectangular ───────────────────────────────────────
 class Globe1 {
   constructor() {
     this.scrollU=0; this.glyphs=[];
-    this.clipRadius=Math.hypot(CX,CY);
     this._build();
   }
   _build() {
@@ -217,7 +257,7 @@ class Globe1 {
   }
   draw(dt,sp,cL,cS,aL,aS,bg) {
     this.scrollU=(this.scrollU+(1/25)*sp*dt)%1;
-    const cr=this.clipRadius, scale=(cr*2)/earthH, earthPx=earthW*scale;
+    const cr=Math.hypot(CX,CY), scale=(cr*2)/earthH, earthPx=earthW*scale;
     const circleR=Math.max(4,(earthH*scale/120)*0.44);
     const fs=Math.max(8,Math.round(circleR*0.7));
     ctx.fillStyle=bg; ctx.fillRect(0,0,SIZE,SIZE);
@@ -486,6 +526,15 @@ function loop(now) {
   else if (active===3&&g3) g3.draw(dt,c.sp,c.cBg,c.cFg);
   else if (active===4&&g4) g4.draw(dt,c.sp,c.nd,c.na);
   document.getElementById('globe-wrap').style.background=active===3?c.cBg:'#ffffff';
+  // 풀스크린 오버레이에 복사
+  if (fsActive) {
+    const W=fsCanvas.width/DPR, H=fsCanvas.height/DPR;
+    fsCtx.fillStyle='#ffffff'; fsCtx.fillRect(0,0,W*DPR,H*DPR);
+    // 중앙에 정사각형 표시 (서로비 유지)
+    const sz=Math.min(W,H);
+    const ox=(W-sz)/2, oy=(H-sz)/2;
+    fsCtx.drawImage(canvas, ox*DPR, oy*DPR, sz*DPR, sz*DPR);
+  }
   requestAnimationFrame(loop);
 }
 
@@ -518,6 +567,35 @@ document.querySelectorAll('.tab').forEach(btn=>{
 document.getElementById('alpha-land').addEventListener('input',e=>{document.getElementById('al-val').textContent=e.target.value+'%';});
 document.getElementById('alpha-sea').addEventListener('input',e=>{document.getElementById('as-val').textContent=e.target.value+'%';});
 document.getElementById('speed').addEventListener('input',e=>{document.getElementById('sp-val').textContent=e.target.value+'×';});
+
+// ── 전체보기 ───────────────────────────────────────────────
+function openFs() {
+  const W=window.innerWidth, H=window.innerHeight;
+  fsCanvas.width=Math.round(W*DPR); fsCanvas.height=Math.round(H*DPR);
+  fsCanvas.style.width=W+'px'; fsCanvas.style.height=H+'px';
+  fsCtx.setTransform(DPR,0,0,DPR,0,0);
+  document.getElementById('fs-overlay').classList.add('active');
+  fsActive=true;
+}
+function closeFs() {
+  document.getElementById('fs-overlay').classList.remove('active');
+  fsActive=false;
+}
+document.getElementById('fs-btn').addEventListener('click', openFs);
+document.getElementById('fs-close').addEventListener('click', closeFs);
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeFs(); });
+// 오버레이 배경 클릭으로 닫기
+document.getElementById('fs-overlay').addEventListener('click', e=>{
+  if(e.target===document.getElementById('fs-overlay')) closeFs();
+});
+window.addEventListener('resize', ()=>{
+  if(fsActive) {
+    const W=window.innerWidth, H=window.innerHeight;
+    fsCanvas.width=Math.round(W*DPR); fsCanvas.height=Math.round(H*DPR);
+    fsCanvas.style.width=W+'px'; fsCanvas.style.height=H+'px';
+    fsCtx.setTransform(DPR,0,0,DPR,0,0);
+  }
+});
 </script>
 </body>
 </html>
