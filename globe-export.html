@@ -487,20 +487,32 @@ class Globe2 {
       if (alpha<=0.003) continue;
       const rr=circleR*(0.55+0.45*z2);
       const color=g.isLand?cL:cS;
+      // ── 구면 틸트에 맞춰 글자 회전 ──────────────────────────
+      // (lat+δ)의 스크린 좌표를 구해 "북쪽" 방향 벡터 계산
+      const dLat=0.12;
+      const lat2=lat+dLat, cL2=Math.cos(lat2);
+      const x3n=cL2*Math.sin(delta), y3n=Math.sin(lat2), z3n=cL2*Math.cos(delta);
+      const y2n=y3n*cosT2-z3n*sinT2;
+      const sxN=CX+R*x3n, syN=CY-R*y2n;
+      const ang=Math.atan2(sxN-sx, sy-syN); // 화면상 "위" 방향 각도
+
       ctx.globalAlpha=alpha;
       if (style==='filled') {
         ctx.beginPath(); ctx.arc(sx,sy,rr,0,Math.PI*2); ctx.fillStyle=color; ctx.fill();
-        ctx.fillStyle=bg; ctx.fillText(g.char,sx,sy+yFixB);
+        ctx.fillStyle=bg;
+        ctx.save(); ctx.translate(sx,sy+yFixB); ctx.rotate(ang); ctx.fillText(g.char,0,0); ctx.restore();
       } else if (style==='tinted') {
         ctx.globalAlpha=alpha*0.3;
         ctx.beginPath(); ctx.arc(sx,sy,rr,0,Math.PI*2); ctx.fillStyle=color; ctx.fill();
         ctx.globalAlpha=alpha;
         if(sw>0){ctx.strokeStyle=color; ctx.stroke();}
-        ctx.fillStyle=color; ctx.fillText(g.char,sx,sy+yFixB);
+        ctx.fillStyle=color;
+        ctx.save(); ctx.translate(sx,sy+yFixB); ctx.rotate(ang); ctx.fillText(g.char,0,0); ctx.restore();
       } else {
         ctx.beginPath(); ctx.arc(sx,sy,rr,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
         if(sw>0){ctx.strokeStyle=color; ctx.stroke();}
-        ctx.fillStyle=color; ctx.fillText(g.char,sx,sy+yFixB);
+        ctx.fillStyle=color;
+        ctx.save(); ctx.translate(sx,sy+yFixB); ctx.rotate(ang); ctx.fillText(g.char,0,0); ctx.restore();
       }
       ctx.globalAlpha=1;
     }
