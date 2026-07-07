@@ -177,7 +177,7 @@
 
   <div id="ctrl-g2" style="display:none">
     <div class="row" style="margin-bottom:10px">
-      <span class="desc-chip">화폐 글리프 · 구면 투영(18° 틸르트) · 12초/회전</span>
+      <span class="desc-chip">화폐 글리프 · 구면 투영 · 12초/회전 · 전체보기에서 드래그 = 축 굴리기 (Shift+드래그 = 이동, 더블클릭 = 리셋)</span>
     </div>
     <div class="row">
       <div style="width:10px;height:10px;border-radius:50%;background:#FF7300;flex-shrink:0"></div>
@@ -433,7 +433,29 @@ class Globe1 {
 }
 
 // ── Globe 2: orthographic sphere ────────────────────────────────────────
-const TILT2=18*Math.PI/180, cosT2=Math.cos(TILT2), sinT2=Math.sin(TILT2);
+// 축 방향 행렬 — 전체보기에서 드래그로 굴려서 조절 (기본: 18° 기울기)
+let M2;
+function resetTilt2(){const t=18*Math.PI/180,c=Math.cos(t),s=Math.sin(t);M2=[1,0,0, 0,c,-s, 0,s,c];}
+resetTilt2();
+// 화면 기준 트랙볼: 세로 드래그(dy) = 화면 X축 회전, 가로 드래그(dx) = 화면 Y축 회전 (라디안)
+function rollAxis2(dx,dy){
+  let [a,b,c1, d,e,f, g,h,i]=M2;
+  const cx=Math.cos(dy),sx=Math.sin(dy);
+  let d2=cx*d-sx*g, e2=cx*e-sx*h, f2=cx*f-sx*i;
+  let g2v=sx*d+cx*g, h2=sx*e+cx*h, i2=sx*f+cx*i;
+  d=d2;e=e2;f=f2;g=g2v;h=h2;i=i2;
+  const cy=Math.cos(dx),sy=Math.sin(dx);
+  const a2=cy*a+sy*g, b2=cy*b+sy*h, c2=cy*c1+sy*i;
+  const g3=-sy*a+cy*g, h3=-sy*b+cy*h, i3=-sy*c1+cy*i;
+  M2=[a2,b2,c2, d,e,f, g3,h3,i3];
+}
+function applyM2(x3,y3,z3){
+  return {
+    x:M2[0]*x3+M2[1]*y3+M2[2]*z3,
+    y:M2[3]*x3+M2[4]*y3+M2[5]*z3,
+    z:M2[6]*x3+M2[7]*y3+M2[8]*z3,
+  };
+}
 class Globe2 {
   constructor() { this.scrollU=0;this.glyphs=[];this.arcs=[];this.arcTimer=0;this._build(); }
   _build(rows=65,cols=130) {
@@ -454,9 +476,9 @@ class Globe2 {
     const delta=(rawU-0.5)*Math.PI*2;
     const cosLat=Math.cos(lat);
     const x3=cosLat*Math.sin(delta), y3=Math.sin(lat), z3=cosLat*Math.cos(delta);
-    const y2=y3*cosT2-z3*sinT2, z2=y3*sinT2+z3*cosT2;
+    const v=applyM2(x3,y3,z3);
     const R=CX*0.88;
-    return {sx:CX+R*x3, sy:CY-R*y2, z:z2};
+    return {sx:CX+R*v.x, sy:CY-R*v.y, z:v.z};
   }
   _spawnArc() {
     const a=Math.floor(Math.random()*NEO_CITIES.length);
@@ -479,10 +501,10 @@ class Globe2 {
       const rawU=(g.eu-CHINA_EU+0.5-this.scrollU+100)%1;
       const delta=(rawU-0.5)*Math.PI*2;
       const x3=cosLat*Math.sin(delta),y3=Math.sin(lat),z3=cosLat*Math.cos(delta);
-      const y2=y3*cosT2-z3*sinT2, z2=y3*sinT2+z3*cosT2;
+      const v=applyM2(x3,y3,z3), z2=v.z;
       if (z2<=0) continue;
       if ((g.variation*13.71)%1 > Math.abs(Math.cos(delta))*1.2) continue;
-      const sx=CX+R*x3, sy=CY-R*y2;
+      const sx=CX+R*v.x, sy=CY-R*v.y;
       const base=g.isLand?(0.72+g.variation*0.28)*aL:(0.06+g.variation*0.12)*aS;
       const alpha=Math.min(1,base*(0.35+0.65*z2)*to);
       if (alpha<=0.003) continue;
@@ -937,16 +959,23 @@ window.addEventListener('resize', ()=>{
 const fsOvEl=document.getElementById('fs-overlay');
 fsCanvas.style.cursor='grab';
 
-// 마우스 드래그
+// 마우스 드래그 — Globe 2는 드래그로 축 굴리기, Shift+드래그는 팬 (다른 글로브는 팬)
+const ROT_SPEED=0.005; // rad/px
 fsOvEl.addEventListener('mousedown',e=>{
   if(!fsActive||e.button!==0) return;
-  fsDrag={sx:e.clientX,sy:e.clientY,px:fsPan.x,py:fsPan.y};
+  const rot = active===2 && !e.shiftKey;
+  fsDrag={sx:e.clientX,sy:e.clientY,px:fsPan.x,py:fsPan.y,mode:rot?'rot':'pan',lx:e.clientX,ly:e.clientY};
   fsCanvas.style.cursor='grabbing';
 });
 document.addEventListener('mousemove',e=>{
   if(!fsDrag) return;
-  fsPan.x=fsDrag.px+(e.clientX-fsDrag.sx);
-  fsPan.y=fsDrag.py+(e.clientY-fsDrag.sy);
+  if(fsDrag.mode==='rot'){
+    rollAxis2((e.clientX-fsDrag.lx)*ROT_SPEED,(e.clientY-fsDrag.ly)*ROT_SPEED);
+    fsDrag.lx=e.clientX; fsDrag.ly=e.clientY;
+  } else {
+    fsPan.x=fsDrag.px+(e.clientX-fsDrag.sx);
+    fsPan.y=fsDrag.py+(e.clientY-fsDrag.sy);
+  }
 });
 document.addEventListener('mouseup',()=>{
   fsDrag=null;
@@ -968,14 +997,15 @@ fsOvEl.addEventListener('wheel',e=>{
   fsZoom=newZoom;
 },{passive:false});
 
-// 더블클릭 → pan/zoom 리셋
-fsCanvas.addEventListener('dblclick',()=>{ fsPan={x:0,y:0}; fsZoom=1; });
+// 더블클릭 → pan/zoom 리셋 (+ Globe 2 축도 기본 기울기로)
+fsCanvas.addEventListener('dblclick',()=>{ fsPan={x:0,y:0}; fsZoom=1; if(active===2) resetTilt2(); });
 
 // 터치 드래그 & 핀치 줌
 fsOvEl.addEventListener('touchstart',e=>{
   if(!fsActive) return;
   if(e.touches.length===1){
-    fsDrag={sx:e.touches[0].clientX,sy:e.touches[0].clientY,px:fsPan.x,py:fsPan.y};
+    const rot = active===2;
+    fsDrag={sx:e.touches[0].clientX,sy:e.touches[0].clientY,px:fsPan.x,py:fsPan.y,mode:rot?'rot':'pan',lx:e.touches[0].clientX,ly:e.touches[0].clientY};
     fsTouch=null;
   } else if(e.touches.length===2){
     fsDrag=null;
@@ -987,8 +1017,13 @@ fsOvEl.addEventListener('touchmove',e=>{
   if(!fsActive) return;
   e.preventDefault();
   if(e.touches.length===1&&fsDrag){
-    fsPan.x=fsDrag.px+(e.touches[0].clientX-fsDrag.sx);
-    fsPan.y=fsDrag.py+(e.touches[0].clientY-fsDrag.sy);
+    if(fsDrag.mode==='rot'){
+      rollAxis2((e.touches[0].clientX-fsDrag.lx)*ROT_SPEED,(e.touches[0].clientY-fsDrag.ly)*ROT_SPEED);
+      fsDrag.lx=e.touches[0].clientX; fsDrag.ly=e.touches[0].clientY;
+    } else {
+      fsPan.x=fsDrag.px+(e.touches[0].clientX-fsDrag.sx);
+      fsPan.y=fsDrag.py+(e.touches[0].clientY-fsDrag.sy);
+    }
   } else if(e.touches.length===2&&fsTouch){
     const d=Math.hypot(e.touches[1].clientX-e.touches[0].clientX,e.touches[1].clientY-e.touches[0].clientY);
     fsZoom=Math.max(0.1,Math.min(20,fsTouch.z0*d/fsTouch.d0));
@@ -997,7 +1032,8 @@ fsOvEl.addEventListener('touchmove',e=>{
 fsOvEl.addEventListener('touchend',e=>{
   if(e.touches.length===0){fsDrag=null;fsTouch=null;}
   else if(e.touches.length===1){
-    fsDrag={sx:e.touches[0].clientX,sy:e.touches[0].clientY,px:fsPan.x,py:fsPan.y};
+    const rot = active===2;
+    fsDrag={sx:e.touches[0].clientX,sy:e.touches[0].clientY,px:fsPan.x,py:fsPan.y,mode:rot?'rot':'pan',lx:e.touches[0].clientX,ly:e.touches[0].clientY};
     fsTouch=null;
   }
 },{passive:true});
