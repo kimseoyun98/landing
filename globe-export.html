@@ -202,6 +202,11 @@
       <input type="color" id="g2-arc" value="#FF7300" />
     </div>
     <div class="row">
+      <label>아크 표시</label>
+      <input type="checkbox" id="g2-arcs" checked />
+      <span class="val">끄면 도시 연결선이 사라짐</span>
+    </div>
+    <div class="row">
       <label>요소 크기</label>
       <input type="range" id="g2-size" min="30" max="250" value="100" />
       <span class="val" id="g2s-val">100%</span>
@@ -490,7 +495,7 @@ class Globe2 {
     let b; do{b=Math.floor(Math.random()*NEO_CITIES.length);}while(b===a);
     this.arcs.push({from:NEO_CITIES[a],to:NEO_CITIES[b],t:0,dur:1.6+Math.random()*1.2,alpha:0});
   }
-  draw(dt,sp,cL,cS,aL,aS,bg,ac,style='stroke',sw=1.2,fw=600,to=0.85,fill=1,blink=true) {
+  draw(dt,sp,cL,cS,aL,aS,bg,ac,style='stroke',sw=1.2,fw=600,to=0.85,fill=1,blink=true,arcsOn=true) {
     this.scrollU=(this.scrollU+(1/24)*sp*dt)%1;
     const R=CX*0.88, scale=(R*2)/earthH;
     const rows=this._rows||65;
@@ -534,6 +539,7 @@ class Globe2 {
     }
     ctx.globalAlpha=1;
     // 아크
+    if (!arcsOn){this.arcs.length=0;return;}
     this.arcTimer+=dt;
     if (this.arcTimer>0.7){this.arcTimer=0;if(this.arcs.length<7)this._spawnArc();}
     this.arcs=this.arcs.filter(a=>a.t<a.dur);
@@ -803,6 +809,7 @@ function ctrl() {
     g2to:parseInt(document.getElementById('g2-to').value)/100,
     g2fill:parseInt(document.getElementById('g2-fill').value)/100,
     g2blink:document.getElementById('g2-blink').checked,
+    g2arcs:document.getElementById('g2-arcs').checked,
     g3st:document.getElementById('g3-style').value,
     g3sw:parseFloat(document.getElementById('g3-sw').value),
     g4st:document.getElementById('g4-style').value,
@@ -812,7 +819,7 @@ function ctrl() {
 
 function _drawGlobe(dt,c) {
   if      (active===1&&g1) g1.draw(dt,c.sp,c.cL,c.cS,c.aL,c.aS,c.bg,c.g1st,c.g1sw,c.g1fw,c.g1to,c.g1fill);
-  else if (active===2&&g2) g2.draw(dt,c.sp,c.g2cL,c.g2cS,c.g2aL,c.g2aS,c.g2bg,c.g2ac,c.g2st,c.g2sw,c.g2fw,c.g2to,c.g2fill,c.g2blink);
+  else if (active===2&&g2) g2.draw(dt,c.sp,c.g2cL,c.g2cS,c.g2aL,c.g2aS,c.g2bg,c.g2ac,c.g2st,c.g2sw,c.g2fw,c.g2to,c.g2fill,c.g2blink,c.g2arcs);
   else if (active===3&&g3) g3.draw(dt,c.sp,c.cBg,c.cFg,c.cs,c.g3st,c.g3sw);
   else if (active===4&&g4) g4.draw(dt,c.sp,c.nd,c.na,c.nb,c.g4st,c.g4sw);
 }
