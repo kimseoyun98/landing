@@ -5,6 +5,7 @@
   <title>Globe Viewer</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -76,7 +77,7 @@
     /* ── 풀스크린 오버레이 ──────────────────────────── */
     #fs-overlay {
       display: none; position: fixed; inset: 0;
-      background: #fff; z-index: 9999;
+      background: #F9FAFB; z-index: 9999;
       align-items: center; justify-content: center;
     }
     #fs-overlay.active { display: flex; }
@@ -89,6 +90,50 @@
       transition: background .15s;
     }
     .fs-close:hover { background: rgba(0,0,0,0.12); }
+    /* ── 전체보기: 랜딩페이지 UI 오버레이 ──────────────────── */
+    #fs-landing {
+      display: none; position: absolute; inset: 0;
+      pointer-events: none; z-index: 2;
+      font-family: 'Pretendard', 'Inter', sans-serif;
+      display: none; flex-direction: column;
+    }
+    #fs-overlay.active #fs-landing { display: flex; }
+    #fs-lnav {
+      position: absolute; top: 0; left: 0; right: 0;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 240px; height: 56px;
+      font-size: 13px; color: #333;
+    }
+    #fs-lnav-left { display: flex; gap: 28px; }
+    #fs-lnav-left span { cursor: pointer; pointer-events: auto; }
+    #fs-lnav-left span:hover { color: #FF7300; }
+    #fs-lnav-right { font-size: 13px; color: #333; display: flex; align-items: center; gap: 4px; }
+    #fs-hero {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 40px 240px 240px;
+      text-align: center;
+    }
+    #fs-hero h2 {
+      font-family: 'Pretendard', sans-serif;
+      font-size: clamp(36px, 7vw, 120px); font-weight: 700;
+      line-height: 1.18; letter-spacing: -1.5px; color: #1a1a1a;
+      margin: 0 0 20px;
+    }
+    #fs-hero h2 em { color: #FF7300; font-style: normal; }
+    #fs-hero p {
+      font-size: clamp(12px, 1.4vw, 15px); color: #555;
+      line-height: 1.85; margin: 0 0 28px;
+    }
+    #fs-hero-btn {
+      pointer-events: auto;
+      background: #FF7300; color: #fff; border: none;
+      border-radius: 100px; padding: 0 40px;
+      height: 78px; font-size: 15px; font-weight: 600; cursor: pointer;
+      font-family: inherit; letter-spacing: -0.2px;
+      transition: background .15s, transform .1s;
+    }
+    #fs-hero-btn:hover { background: #e06600; transform: translateY(-1px); }
   </style>
 </head>
 <body>
@@ -113,6 +158,25 @@
 <div id="fs-overlay">
   <button class="fs-close" id="fs-close">✕</button>
   <canvas id="fs-canvas"></canvas>
+  <!-- 랜딩페이지 UI 오버레이 -->
+  <div id="fs-landing">
+    <nav id="fs-lnav">
+      <div id="fs-lnav-left">
+        <span>이롬넷 알아보기</span>
+        <span>기술과 신뢰</span>
+        <span>서비스</span>
+        <span>소식</span>
+      </div>
+      <div id="fs-lnav-right">KR <span style="font-size:10px">▾</span></div>
+    </nav>
+    <div id="fs-hero">
+      <h2>기술로 연결하는<br>세상의 <em>모든 거래</em></h2>
+      <p>우리는 모든 거래가 더 자유롭게 연결되어야 한다고 믿습니다.<br>
+      극경과 환경에 상관없이 누구나 쉽고 빠르게 거래를 할 수 있도록,<br>
+      이롬넷은 단절된 거래를 연결해 더 편리한 일상을 만들어갑니다.</p>
+      <button id="fs-hero-btn">이롬넷 알아보기</button>
+    </div>
+  </div>
 </div>
 
 <div class="panel">
@@ -177,21 +241,21 @@
 
   <div id="ctrl-g2" style="display:none">
     <div class="row" style="margin-bottom:10px">
-      <span class="desc-chip">화폐 글리프 · 구면 투영 · 12초/회전 · 전체보기에서 드래그 = 축 굴리기 (Shift+드래그 = 이동, 더블클릭 = 리셋)</span>
+      <span class="desc-chip">화폐 글리프 · 구면 투영 · 12초/회전 · 전체보기에서 드래그 = 축 굴리기 (Shift·Space+드래그 = 이동, 더블클릭 = 리셋)</span>
     </div>
     <div class="row">
       <div style="width:10px;height:10px;border-radius:50%;background:#FF7300;flex-shrink:0"></div>
       <label>육지 색</label>
       <input type="color" id="g2-land" value="#FF7300" />
-      <input type="range" id="g2-alpha-land" min="0" max="100" value="90" />
-      <span class="val" id="g2-al-val">90%</span>
+      <input type="range" id="g2-alpha-land" min="0" max="100" value="100" />
+      <span class="val" id="g2-al-val">100%</span>
     </div>
     <div class="row">
       <div style="width:10px;height:10px;border-radius:50%;background:#8B95A1;flex-shrink:0"></div>
       <label>바다 색</label>
       <input type="color" id="g2-sea" value="#8B95A1" />
-      <input type="range" id="g2-alpha-sea" min="0" max="100" value="60" />
-      <span class="val" id="g2-as-val">60%</span>
+      <input type="range" id="g2-alpha-sea" min="0" max="100" value="100" />
+      <span class="val" id="g2-as-val">100%</span>
     </div>
     <div class="row">
       <label>바깥 배경</label>
@@ -208,23 +272,23 @@
     </div>
     <div class="row">
       <label>요소 크기</label>
-      <input type="range" id="g2-size" min="30" max="250" value="100" />
-      <span class="val" id="g2s-val">100%</span>
+      <input type="range" id="g2-size" min="30" max="250" value="85" />
+      <span class="val" id="g2s-val">85%</span>
     </div>
     <div class="row">
       <label>글자 굵기</label>
-      <input type="range" id="g2-fw" min="100" max="900" step="100" value="600" />
-      <span class="val" id="g2fw-val">600</span>
+      <input type="range" id="g2-fw" min="100" max="900" step="100" value="400" />
+      <span class="val" id="g2fw-val">400</span>
     </div>
     <div class="row">
       <label>글자 선명도</label>
-      <input type="range" id="g2-to" min="10" max="100" value="85" />
-      <span class="val" id="g2to-val">85%</span>
+      <input type="range" id="g2-to" min="10" max="100" value="100" />
+      <span class="val" id="g2to-val">100%</span>
     </div>
     <div class="row">
       <label>글자 채움</label>
-      <input type="range" id="g2-fill" min="0" max="250" value="100" />
-      <span class="val" id="g2fill-val">100%</span>
+      <input type="range" id="g2-fill" min="0" max="250" value="141" />
+      <span class="val" id="g2fill-val">141%</span>
     </div>
     <div class="row">
       <label>스타일</label>
@@ -236,13 +300,35 @@
     </div>
     <div class="row">
       <label>선 두께</label>
-      <input type="range" id="g2-sw" min="0" max="5" step="0.5" value="1.2" />
-      <span class="val" id="g2sw-val">1.2</span>
+      <input type="range" id="g2-sw" min="0" max="5" step="0.5" value="0" />
+      <span class="val" id="g2sw-val">0</span>
     </div>
     <div class="row">
       <label>깜박임</label>
-      <input type="checkbox" id="g2-blink" checked />
+      <input type="checkbox" id="g2-blink" />
       <span class="val">끄면 글자가 회전 중에도 사라지지 않음</span>
+    </div>
+    <div class="row">
+      <label>대륙 면</label>
+      <input type="checkbox" id="g2-land-fill" />
+      <span class="val">켜면 대륙이 지정 색으로 채워짐</span>
+    </div>
+    <div class="row" id="g2-land-fill-row" style="display:none">
+      <label>대륙 색</label>
+      <input type="color" id="g2-land-fill-color" value="#888888" />
+      <input type="range" id="g2-land-fill-alpha" min="0" max="100" value="25" />
+      <span class="val" id="g2lfa-val">25%</span>
+    </div>
+    <div class="row">
+      <label>바다 면</label>
+      <input type="checkbox" id="g2-sea-fill" />
+      <span class="val">켜면 바다가 지정 색으로 채워짐</span>
+    </div>
+    <div class="row" id="g2-sea-fill-row" style="display:none">
+      <label>바다 색</label>
+      <input type="color" id="g2-sea-fill-color" value="#4a90d9" />
+      <input type="range" id="g2-sea-fill-alpha" min="0" max="100" value="20" />
+      <span class="val" id="g2sfa-val">20%</span>
     </div>
   </div>
 
@@ -319,12 +405,12 @@
   <div class="panel-title">속도</div>
   <div class="row">
     <label>회전 속도</label>
-    <input type="range" id="speed" min="1" max="10" value="2" />
-    <span class="val" id="sp-val">2×</span>
+    <input type="range" id="speed" min="1" max="10" value="1" />
+    <span class="val" id="sp-val">1×</span>
   </div>
 </div>
 
-<div class="panel" style="flex-direction:row;align-items:center;gap:10px;padding:14px 24px">
+<div class="panel" id="panel-status" style="flex-direction:row;align-items:center;gap:10px;padding:14px 24px">
   <div class="status-dot"></div>
   <span id="status-text">로딩 중...</span>
 </div>
@@ -495,13 +581,58 @@ class Globe2 {
     let b; do{b=Math.floor(Math.random()*NEO_CITIES.length);}while(b===a);
     this.arcs.push({from:NEO_CITIES[a],to:NEO_CITIES[b],t:0,dur:1.6+Math.random()*1.2,alpha:0});
   }
-  draw(dt,sp,cL,cS,aL,aS,bg,ac,style='stroke',sw=1.2,fw=600,to=0.85,fill=1,blink=true,arcsOn=true) {
+  draw(dt,sp,cL,cS,aL,aS,bg,ac,style='stroke',sw=1.2,fw=600,to=0.85,fill=1,blink=true,arcsOn=true,landFill=false,landFillColor='#888888',landFillAlpha=0.25,seaFill=false,seaFillColor='#4a90d9',seaFillAlpha=0.20) {
     this.scrollU=(this.scrollU+(1/24)*sp*dt)%1;
     const R=CX*0.88, scale=(R*2)/earthH;
     const rows=this._rows||65;
     const circleR=Math.max(4,(earthH*scale/rows)*0.49), fs=Math.round(circleR*1.1*fill);
     ctx.fillStyle=bg; ctx.fillRect(0,0,SIZE,SIZE);
     ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(CX,CY,R,0,Math.PI*2); ctx.fill();
+    // 대륙·바다 면 채우기 — 픽셀 단위 구면 역투영
+    if ((landFill || seaFill) && earthReady) {
+      const diam = Math.round(R * 2);
+      if (!this._fillCanvas || this._fillCanvas.width !== diam) {
+        this._fillCanvas = document.createElement('canvas');
+        this._fillCanvas.width = diam; this._fillCanvas.height = diam;
+        this._fillCtx = this._fillCanvas.getContext('2d');
+      }
+      const fctx = this._fillCtx;
+      const imgData = fctx.createImageData(diam, diam);
+      const d = imgData.data;
+      const lcr=parseInt(landFillColor.slice(1,3),16), lcg=parseInt(landFillColor.slice(3,5),16), lcb=parseInt(landFillColor.slice(5,7),16);
+      const scr=parseInt(seaFillColor.slice(1,3),16),  scg=parseInt(seaFillColor.slice(3,5),16),  scb=parseInt(seaFillColor.slice(5,7),16);
+      const R2 = R * R;
+      for (let py = 0; py < diam; py++) {
+        for (let px = 0; px < diam; px++) {
+          const dx = px - R, dy = py - R, d2 = dx*dx + dy*dy;
+          if (d2 >= R2) continue;
+          const vx = dx/R, vy = -dy/R, vz = Math.sqrt(1 - d2/R2);
+          // M2 역행렬 = 전치
+          const ix = M2[0]*vx + M2[3]*vy + M2[6]*vz;
+          const iy = M2[1]*vx + M2[4]*vy + M2[7]*vz;
+          const iz = M2[2]*vx + M2[5]*vy + M2[8]*vz;
+          const lat2 = Math.asin(Math.max(-1,Math.min(1,iy)));
+          const ev2 = 0.5 - lat2/Math.PI;
+          const delta2 = Math.atan2(ix, iz);
+          const rawU2 = delta2/(Math.PI*2) + 0.5;
+          const eu2 = ((rawU2 + CHINA_EU - 0.5 + this.scrollU) % 1 + 1) % 1;
+          const epx = Math.min(Math.floor(eu2*earthW), earthW-1);
+          const epy = Math.min(Math.floor(ev2*earthH), earthH-1);
+          const isL = (earthData[(epy*earthW+epx)*4] ?? 255) < 128;
+          const depth = 0.5 + 0.5*vz;
+          const idx = (py*diam+px)*4;
+          if (isL && landFill) {
+            d[idx]=lcr; d[idx+1]=lcg; d[idx+2]=lcb;
+            d[idx+3]=Math.round(landFillAlpha * depth * 255);
+          } else if (!isL && seaFill) {
+            d[idx]=scr; d[idx+1]=scg; d[idx+2]=scb;
+            d[idx+3]=Math.round(seaFillAlpha * depth * 255);
+          }
+        }
+      }
+      fctx.putImageData(imgData, 0, 0);
+      ctx.drawImage(this._fillCanvas, CX-R, CY-R);
+    }
     if (!this.glyphs.length) return;
     ctx.font=`${fw} ${fs}px 'Inter',sans-serif`; ctx.textAlign='center'; ctx.textBaseline='alphabetic'; ctx.lineWidth=sw;
     const m0b=ctx.measureText('$'); const yFixB=(m0b.actualBoundingBoxAscent-m0b.actualBoundingBoxDescent)/2;
@@ -810,6 +941,12 @@ function ctrl() {
     g2fill:parseInt(document.getElementById('g2-fill').value)/100,
     g2blink:document.getElementById('g2-blink').checked,
     g2arcs:document.getElementById('g2-arcs').checked,
+    g2landFill:document.getElementById('g2-land-fill').checked,
+    g2landFillColor:document.getElementById('g2-land-fill-color').value,
+    g2landFillAlpha:parseInt(document.getElementById('g2-land-fill-alpha').value)/100,
+    g2seaFill:document.getElementById('g2-sea-fill').checked,
+    g2seaFillColor:document.getElementById('g2-sea-fill-color').value,
+    g2seaFillAlpha:parseInt(document.getElementById('g2-sea-fill-alpha').value)/100,
     g3st:document.getElementById('g3-style').value,
     g3sw:parseFloat(document.getElementById('g3-sw').value),
     g4st:document.getElementById('g4-style').value,
@@ -819,7 +956,7 @@ function ctrl() {
 
 function _drawGlobe(dt,c) {
   if      (active===1&&g1) g1.draw(dt,c.sp,c.cL,c.cS,c.aL,c.aS,c.bg,c.g1st,c.g1sw,c.g1fw,c.g1to,c.g1fill);
-  else if (active===2&&g2) g2.draw(dt,c.sp,c.g2cL,c.g2cS,c.g2aL,c.g2aS,c.g2bg,c.g2ac,c.g2st,c.g2sw,c.g2fw,c.g2to,c.g2fill,c.g2blink,c.g2arcs);
+  else if (active===2&&g2) g2.draw(dt,c.sp,c.g2cL,c.g2cS,c.g2aL,c.g2aS,c.g2bg,c.g2ac,c.g2st,c.g2sw,c.g2fw,c.g2to,c.g2fill,c.g2blink,c.g2arcs,c.g2landFill,c.g2landFillColor,c.g2landFillAlpha,c.g2seaFill,c.g2seaFillColor,c.g2seaFillAlpha);
   else if (active===3&&g3) g3.draw(dt,c.sp,c.cBg,c.cFg,c.cs,c.g3st,c.g3sw);
   else if (active===4&&g4) g4.draw(dt,c.sp,c.nd,c.na,c.nb,c.g4st,c.g4sw);
 }
@@ -904,6 +1041,18 @@ document.getElementById('g1-fill').addEventListener('input',e=>{document.getElem
 document.getElementById('g2-fw').addEventListener('input',e=>{document.getElementById('g2fw-val').textContent=e.target.value;});
 document.getElementById('g2-to').addEventListener('input',e=>{document.getElementById('g2to-val').textContent=e.target.value+'%';});
 document.getElementById('g2-fill').addEventListener('input',e=>{document.getElementById('g2fill-val').textContent=e.target.value+'%';});
+document.getElementById('g2-land-fill').addEventListener('change',e=>{
+  document.getElementById('g2-land-fill-row').style.display=e.target.checked?'flex':'none';
+});
+document.getElementById('g2-land-fill-alpha').addEventListener('input',e=>{
+  document.getElementById('g2lfa-val').textContent=e.target.value+'%';
+});
+document.getElementById('g2-sea-fill').addEventListener('change',e=>{
+  document.getElementById('g2-sea-fill-row').style.display=e.target.checked?'flex':'none';
+});
+document.getElementById('g2-sea-fill-alpha').addEventListener('input',e=>{
+  document.getElementById('g2sfa-val').textContent=e.target.value+'%';
+});
 document.getElementById('speed').addEventListener('input',e=>{document.getElementById('sp-val').textContent=e.target.value+'×';});
 
 // ── 코인 크기 슬라이더 → rebuild ────────────────────────────────────────
@@ -938,6 +1087,13 @@ sizeRebuild('g4-size','g4s-val',sc=>{
 
 // ── 전체보기 pan/zoom 상태 ─────────────────────────────────────────────────
 let fsPan={x:0,y:0}, fsZoom=1, fsDrag=null, fsTouch=null;
+let fsSpaceDown=false;
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'&&fsActive){e.preventDefault();fsSpaceDown=true;if(fsCanvas)fsCanvas.style.cursor='move';}
+});
+document.addEventListener('keyup',e=>{
+  if(e.code==='Space'){fsSpaceDown=false;if(fsActive&&fsCanvas)fsCanvas.style.cursor=fsDrag?'grabbing':'grab';}
+});
 
 function openFs() {
   const W=window.innerWidth, H=window.innerHeight;
@@ -976,7 +1132,7 @@ fsCanvas.style.cursor='grab';
 const ROT_SPEED=0.005; // rad/px
 fsOvEl.addEventListener('mousedown',e=>{
   if(!fsActive||e.button!==0) return;
-  const rot = active===2 && !e.shiftKey;
+  const rot = active===2 && !e.shiftKey && !fsSpaceDown;
   fsDrag={sx:e.clientX,sy:e.clientY,px:fsPan.x,py:fsPan.y,mode:rot?'rot':'pan',lx:e.clientX,ly:e.clientY};
   fsCanvas.style.cursor='grabbing';
 });
